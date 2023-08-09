@@ -12,7 +12,7 @@ class Comment(models.Model):
     bg_color = models.CharField(max_length=8, null=True)
     created_on = models.DateTimeField(auto_now_add=True)
 
-    created_by = models.CharField(max_length=250)
+    created_by = models.IntegerField()
 
     def __str__(self):
         return self.title
@@ -40,7 +40,7 @@ class Script(models.Model):
     number_of_pages = models.IntegerField(default=1)
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
-    created_by = models.CharField(max_length=250)
+    created_by = models.IntegerField()
 
     def __str__(self):
         return self.script_uuid
@@ -59,10 +59,10 @@ class Contributor(models.Model):
     contributor_role = models.CharField(max_length=30, choices=CONTRIBUTOR_ROLE, default='viewer')
 
     script = models.ForeignKey(Script, on_delete=models.SET_NULL, null=True, blank=True)
-    user = models.CharField(max_length=250)
+    user = models.IntegerField()
 
     def __str__(self):
-        return self.user + '-' + self.contributor_role
+        return str(self.user) + '-' + self.contributor_role
 
 
 class StoryDocs(models.Model):
