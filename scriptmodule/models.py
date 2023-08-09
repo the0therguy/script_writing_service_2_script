@@ -59,10 +59,10 @@ class Contributor(models.Model):
     contributor_role = models.CharField(max_length=30, choices=CONTRIBUTOR_ROLE, default='viewer')
 
     script = models.ForeignKey(Script, on_delete=models.SET_NULL, null=True, blank=True)
-    user = models.IntegerField()
+    contributor = models.IntegerField()
 
     def __str__(self):
-        return str(self.user) + '-' + self.contributor_role
+        return str(self.contributor) + '-' + self.contributor_role
 
 
 class StoryDocs(models.Model):
