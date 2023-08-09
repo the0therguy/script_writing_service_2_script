@@ -5,5 +5,8 @@ urlpatterns = [
     path('api/v1/scripts/', ScriptView.as_view(), name='get-and-create-script'),
     path('api/v1/contributors/<str:script_uuid>/', ContributorView.as_view(), name='get-and-create-contributors'),
     path('api/v1/contributor/<str:contributor_uuid>/', ContributorRetrieveView.as_view(),
-         name='contributor-get-update-delete')
+         name='contributor-get-update-delete'),
+    path('api/v1/storydocs/<str:script_uuid>/', StoryDocsListCreateView.as_view(), name='story-list-create-view'),
+    path('api/v1/storydoc/<str:story_docs_uuid>/', StoryDocsRetrieveUpdateDeleteView.as_view(),
+         name='story-docs-update-delete'),
 ]

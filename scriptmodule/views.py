@@ -148,3 +148,96 @@ class ContributorRetrieveView(APIView):
             activity.save()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response('No contributor found', status=status.HTTP_404_NOT_FOUND)
+
+
+class StoryDocsListCreateView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_user_id(self, request):
+        data = token_validator(request)
+        return data
+
+    def post(self, request, script_uuid):
+        user_data = self.get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+
+        try:
+            script = Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return Response({'script_uuid': 'Script not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not script.parent:
+            story_docs = StoryDocs.objects.create(
+                **{'story_docs_uuid': request.data.get('uuid'), 'heading': request.data.get('heading'),
+                   'script': script})
+            story_docs.save()
+            activity = ScriptActivity.objects.create(
+                **{'activity_uuid': uuid.uuid4(), 'action': 'create', 'message': 'new contributor added',
+                   'details': {'created_by': user_data.get('user_id')}})
+            activity.save()
+
+            return Response(status=status.HTTP_201_CREATED)
+        return Response('It has a parent', status=status.HTTP_400_BAD_REQUEST)
+
+
+class StoryDocsRetrieveUpdateDeleteView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_user_id(self, request):
+        data = token_validator(request)
+        return data
+
+    def get_object(self, story_docs_uuid):
+        try:
+            return StoryDocs.objects.get(story_docs_uuid=story_docs_uuid)
+        except StoryDocs.DoesNotExist:
+            return None
+
+    def get(self, request, story_docs_uuid):
+        user_data = self.get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+
+        story_docs = self.get_object(story_docs_uuid)
+        if story_docs:
+            serializer = StoryDocsSerializer(story_docs)
+            return Response(serializer.data)
+        return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def put(self, request, story_docs_uuid):
+        user_data = self.get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+
+        story_docs = self.get_object(story_docs_uuid)
+        if story_docs:
+            serializer = StoryDocsUpdateSerializer(story_docs, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                activity = ScriptActivity.objects.create(
+                    **{'activity_uuid': uuid.uuid4(), 'action': 'update',
+                       'message': f'contributor {story_docs_uuid} updated',
+                       'details': {'created_by': user_data.get('user_id')}})
+                activity.save()
+                return Response(serializer.data)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
+
+    def delete(self, request, story_docs_uuid):
+        user_data = self.get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+
+        story_docs = self.get_object(story_docs_uuid)
+        if story_docs:
+            story_docs.delete()
+            activity = ScriptActivity.objects.create(
+                **{'activity_uuid': uuid.uuid4(), 'action': 'delete',
+                   'message': f'contributor {story_docs_uuid} deleted',
+                   'details': {'created_by': user_data.get('user_id')}})
+            activity.save()
+
+            return Response({'message': 'StoryDocs deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+        return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
