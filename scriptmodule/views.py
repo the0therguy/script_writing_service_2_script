@@ -178,7 +178,16 @@ class StoryDocsListCreateView(APIView):
             activity.save()
 
             return Response(status=status.HTTP_201_CREATED)
-        return Response('It has a parent', status=status.HTTP_400_BAD_REQUEST)
+        parent_script = Script.objects.get(script_uuid=script.parent.script_uuid)
+        story_docs = StoryDocs.objects.create(
+            **{'story_docs_uuid': request.data.get('uuid'), 'heading': request.data.get('heading'),
+               'script': parent_script})
+        story_docs.save()
+        activity = ScriptActivity.objects.create(
+            **{'activity_uuid': uuid.uuid4(), 'action': 'create', 'message': 'new contributor added',
+               'details': {'created_by': user_data.get('user_id')}})
+        activity.save()
+        return Response(status=status.HTTP_201_CREATED)
 
 
 class StoryDocsRetrieveUpdateDeleteView(APIView):

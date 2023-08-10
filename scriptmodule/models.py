@@ -15,7 +15,9 @@ class Comment(models.Model):
     created_by = models.IntegerField()
 
     def __str__(self):
-        return self.title
+        if self.title:
+            return self.title
+        return self.comment_uuid
 
 
 SCRIPT_MODE = (
@@ -43,7 +45,9 @@ class Script(models.Model):
     created_by = models.IntegerField()
 
     def __str__(self):
-        return self.script_uuid
+        if not self.title:
+            return self.script_uuid
+        return self.title
 
 
 CONTRIBUTOR_ROLE = (
@@ -62,7 +66,7 @@ class Contributor(models.Model):
     contributor = models.IntegerField()
 
     def __str__(self):
-        return str(self.contributor) + '-' + self.contributor_role
+        return self.contributor_uuid + '-' + self.contributor_role + '-' + self.script.script_uuid
 
 
 class StoryDocs(models.Model):
@@ -72,7 +76,9 @@ class StoryDocs(models.Model):
     script = models.OneToOneField(Script, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return self.heading
+        if self.heading:
+            return self.heading
+        return self.story_docs_uuid
 
 
 class SubStory(models.Model):
@@ -86,7 +92,9 @@ class SubStory(models.Model):
     story_docs = models.ForeignKey(StoryDocs, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return self.sub_heading
+        if self.sub_heading:
+            return self.sub_heading
+        return self.sub_story_uuid
 
 
 class Act(models.Model):
@@ -101,7 +109,9 @@ class Act(models.Model):
     script = models.ForeignKey(Script, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return self.title
+        if self.title:
+            return self.title
+        return self.act_uuid
 
 
 class Scene(models.Model):
@@ -122,7 +132,9 @@ class Scene(models.Model):
     act = models.ForeignKey(Act, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        return self.scene_header
+        if self.scene_header:
+            return self.scene_header
+        return self.scene_uuid
 
 
 LOCATION_TYPE = (
