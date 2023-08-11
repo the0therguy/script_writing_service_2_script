@@ -16,16 +16,17 @@ def create_script_activity(data):
     activity.save()
 
 
+def get_user_id(request):
+    data = token_validator(request)
+    return data
+
+
 class ScriptView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [TokenAuthentication]
 
-    def get_user_id(self, request):
-        data = token_validator(request)
-        return data
-
     def get(self, request):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
         scripts = Script.objects.filter(created_by=user_data.get('user_id'), parent=None).order_by('-updated_on')
@@ -33,7 +34,7 @@ class ScriptView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
         request.data['created_by'] = user_data.get('user_id')
@@ -51,12 +52,8 @@ class ContributorView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [TokenAuthentication]
 
-    def get_user_id(self, request):
-        data = token_validator(request)
-        return data
-
     def get(self, request, script_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
         try:
@@ -69,7 +66,7 @@ class ContributorView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     def post(self, request, script_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
         try:
@@ -95,10 +92,6 @@ class ContributorRetrieveView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [TokenAuthentication]
 
-    def get_user_id(self, request):
-        data = token_validator(request)
-        return data
-
     def get_object(self, contributor_uuid):
         try:
             return Contributor.objects.get(contributor_uuid=contributor_uuid)
@@ -106,7 +99,7 @@ class ContributorRetrieveView(APIView):
             return None
 
     def get(self, request, contributor_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -117,7 +110,7 @@ class ContributorRetrieveView(APIView):
         return Response({'error': 'Contributor not found'}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, contributor_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -134,7 +127,7 @@ class ContributorRetrieveView(APIView):
         return Response('Contributor not found', status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, contributor_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -152,12 +145,8 @@ class StoryDocsListCreateView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [TokenAuthentication]
 
-    def get_user_id(self, request):
-        data = token_validator(request)
-        return data
-
     def post(self, request, script_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -189,10 +178,6 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [TokenAuthentication]
 
-    def get_user_id(self, request):
-        data = token_validator(request)
-        return data
-
     def get_object(self, story_docs_uuid):
         try:
             return StoryDocs.objects.get(story_docs_uuid=story_docs_uuid)
@@ -200,7 +185,7 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
             return None
 
     def get(self, request, story_docs_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -211,7 +196,7 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
         return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
 
     def put(self, request, story_docs_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -228,7 +213,7 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
         return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
 
     def delete(self, request, story_docs_uuid):
-        user_data = self.get_user_id(request)
+        user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
@@ -240,3 +225,92 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
                                     'details': {'created_by': user_data.get('user_id')}})
             return Response({'message': 'StoryDocs deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class SubStoryDocsListCreateView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_story_docs(self, script):
+        try:
+            return StoryDocs.objects.get(script=script)
+        except StoryDocs.DoesNotExist:
+            return None
+
+    def get(self, request, script_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+        script = self.get_script(script_uuid)
+        if script:
+            if not script.parent:
+                sub_story = SubStory.objects.filter(**{'story_docs__script': script}).order_by('sub_story_no')
+                serializer = SubStorySerializer(sub_story, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            parent_script = self.get_script(script.parent.script_uuid)
+            if parent_script:
+                sub_story = SubStory.objects.filter(**{'story_docs__script': script}).order_by('sub_story_no')
+                serializer = SubStorySerializer(sub_story, many=True)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response('No Script Found', status=status.HTTP_400_BAD_REQUEST)
+        return Response('No Script Found', status=status.HTTP_400_BAD_REQUEST)
+
+    def post(self, request, script_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if script:
+            if not script.parent:
+                story_docs = self.get_story_docs(script)
+                if story_docs:
+                    request.data['story_docs'] = story_docs.id
+                    serializer = SubStorySerializer(data=request.data)
+                    if serializer.is_valid():
+                        serializer.save()
+                        create_script_activity({'action': 'create', 'message': 'new sub_story created',
+                                                'details': {'created_by': user_data.get('user_id')}})
+                        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                story_docs = StoryDocs.objects.create(**{'story_docs_uuid': uuid.uuid4(), 'script': script})
+                story_docs.save()
+                request.data['story_docs'] = story_docs.id
+                serializer = SubStorySerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    create_script_activity({'action': 'create', 'message': 'new sub_story created',
+                                            'details': {'created_by': user_data.get('user_id')}})
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+            parent_script = self.get_script(script.parent.script_uuid)
+            if parent_script:
+                story_docs = self.get_story_docs(parent_script)
+                if story_docs:
+                    request.data['story_docs'] = story_docs.id
+                    serializer = SubStorySerializer(data=request.data)
+                    if serializer.is_valid():
+                        serializer.save()
+                        create_script_activity({'action': 'create', 'message': 'new sub_story created',
+                                                'details': {'created_by': user_data.get('user_id')}})
+                        return Response(serializer.data, status=status.HTTP_201_CREATED)
+                    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+                story_docs = StoryDocs.objects.create(**{'story_docs_uuid': uuid.uuid4(), 'script': parent_script})
+                story_docs.save()
+                request.data['story_docs'] = story_docs.id
+                serializer = SubStorySerializer(data=request.data)
+                if serializer.is_valid():
+                    serializer.save()
+                    create_script_activity({'action': 'create', 'message': 'new sub_story created',
+                                            'details': {'created_by': user_data.get('user_id')}})
+                    return Response(serializer.data, status=status.HTTP_201_CREATED)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response('No script found', status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Script not found'}, status=status.HTTP_404_NOT_FOUND)

@@ -34,3 +34,9 @@ class ContributorUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Contributor
         exclude = ('contributor_uuid', 'script',)
+
+
+class SubStorySerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubStory
+        fields = '__all__'

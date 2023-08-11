@@ -71,7 +71,7 @@ class Contributor(models.Model):
 
 class StoryDocs(models.Model):
     story_docs_uuid = models.CharField(max_length=50)
-    heading = models.CharField(max_length=200)
+    heading = models.CharField(max_length=200, null=True, blank=True)
 
     script = models.OneToOneField(Script, on_delete=models.SET_NULL, null=True, blank=True)
 
@@ -83,7 +83,7 @@ class StoryDocs(models.Model):
 
 class SubStory(models.Model):
     sub_story_uuid = models.CharField(max_length=50)
-    sub_heading = models.CharField(max_length=200)
+    sub_heading = models.CharField(max_length=200, null=True, blank=True)
     body = models.TextField(null=True, blank=True)
 
     previous_sub_story = models.CharField(max_length=50, null=True, blank=True)
