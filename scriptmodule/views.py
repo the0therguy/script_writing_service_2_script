@@ -10,6 +10,11 @@ from rest_framework import status
 
 
 # Create your views here.
+def create_script_activity(data):
+    data['activity_uuid'] = str(uuid.uuid4())
+    activity = ScriptActivity.objects.create(**data)
+    activity.save()
+
 
 class ScriptView(APIView):
     permission_classes = [AllowAny]
@@ -35,10 +40,9 @@ class ScriptView(APIView):
         serializer = ScriptSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
-            activity = ScriptActivity.objects.create(
-                **{'activity_uuid': uuid.uuid4(), 'action': 'create', 'message': 'new script created',
-                   'details': {'created_by': user_data.get('user_id')}})
-            activity.save()
+            create_script_activity({'action': 'create', 'message': 'new script created',
+                                    'details': {'created_by': user_data.get('user_id')}})
+
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
@@ -82,10 +86,8 @@ class ContributorView(APIView):
                'contributor_role': request.data.get('contributor_role'),
                'contributor': request.data.get('contributor')})
         contributor.save()
-        activity = ScriptActivity.objects.create(
-            **{'activity_uuid': uuid.uuid4(), 'action': 'create', 'message': 'new contributor added',
-               'details': {'created_by': user_data.get('user_id')}})
-        activity.save()
+        create_script_activity({'action': 'create', 'message': 'new contributor added',
+                                'details': {'created_by': user_data.get('user_id')}})
         return Response('Contributor added', status=status.HTTP_201_CREATED)
 
 
@@ -124,11 +126,9 @@ class ContributorRetrieveView(APIView):
             serializer = ContributorUpdateSerializer(contributor, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                activity = ScriptActivity.objects.create(
-                    **{'activity_uuid': uuid.uuid4(), 'action': 'update',
-                       'message': f'contributor {contributor_uuid} updated',
-                       'details': {'created_by': user_data.get('user_id')}})
-                activity.save()
+                create_script_activity({'action': 'update',
+                                        'message': f'contributor {contributor_uuid} updated',
+                                        'details': {'created_by': user_data.get('user_id')}})
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response('Contributor not found', status=status.HTTP_404_NOT_FOUND)
@@ -141,11 +141,9 @@ class ContributorRetrieveView(APIView):
         contributor = self.get_object(contributor_uuid)
         if contributor:
             contributor.delete()
-            activity = ScriptActivity.objects.create(
-                **{'activity_uuid': uuid.uuid4(), 'action': 'delete',
-                   'message': f'contributor {contributor_uuid} deleted',
-                   'details': {'created_by': user_data.get('user_id')}})
-            activity.save()
+            create_script_activity({'action': 'delete',
+                                    'message': f'contributor {contributor_uuid} deleted',
+                                    'details': {'created_by': user_data.get('user_id')}})
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response('No contributor found', status=status.HTTP_404_NOT_FOUND)
 
@@ -172,10 +170,8 @@ class StoryDocsListCreateView(APIView):
                 **{'story_docs_uuid': request.data.get('uuid'), 'heading': request.data.get('heading'),
                    'script': script})
             story_docs.save()
-            activity = ScriptActivity.objects.create(
-                **{'activity_uuid': uuid.uuid4(), 'action': 'create', 'message': 'new contributor added',
-                   'details': {'created_by': user_data.get('user_id')}})
-            activity.save()
+            create_script_activity({'action': 'create', 'message': 'new contributor added',
+                                    'details': {'created_by': user_data.get('user_id')}})
 
             return Response(status=status.HTTP_201_CREATED)
         parent_script = Script.objects.get(script_uuid=script.parent.script_uuid)
@@ -183,10 +179,9 @@ class StoryDocsListCreateView(APIView):
             **{'story_docs_uuid': request.data.get('uuid'), 'heading': request.data.get('heading'),
                'script': parent_script})
         story_docs.save()
-        activity = ScriptActivity.objects.create(
-            **{'activity_uuid': uuid.uuid4(), 'action': 'create', 'message': 'new contributor added',
-               'details': {'created_by': user_data.get('user_id')}})
-        activity.save()
+        create_script_activity({'action': 'create', 'message': 'new contributor added',
+                                'details': {'created_by': user_data.get('user_id')}})
+
         return Response(status=status.HTTP_201_CREATED)
 
 
@@ -225,11 +220,9 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
             serializer = StoryDocsUpdateSerializer(story_docs, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
-                activity = ScriptActivity.objects.create(
-                    **{'activity_uuid': uuid.uuid4(), 'action': 'update',
-                       'message': f'contributor {story_docs_uuid} updated',
-                       'details': {'created_by': user_data.get('user_id')}})
-                activity.save()
+                create_script_activity({'action': 'update',
+                                        'message': f'contributor {story_docs_uuid} updated',
+                                        'details': {'created_by': user_data.get('user_id')}})
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
@@ -242,11 +235,8 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
         story_docs = self.get_object(story_docs_uuid)
         if story_docs:
             story_docs.delete()
-            activity = ScriptActivity.objects.create(
-                **{'activity_uuid': uuid.uuid4(), 'action': 'delete',
-                   'message': f'contributor {story_docs_uuid} deleted',
-                   'details': {'created_by': user_data.get('user_id')}})
-            activity.save()
-
+            create_script_activity({'action': 'delete',
+                                    'message': f'contributor {story_docs_uuid} deleted',
+                                    'details': {'created_by': user_data.get('user_id')}})
             return Response({'message': 'StoryDocs deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
