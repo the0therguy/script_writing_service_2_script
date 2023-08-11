@@ -22,7 +22,7 @@ class ScriptView(APIView):
     def get(self, request):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
         scripts = Script.objects.filter(created_by=user_data.get('user_id'), parent=None).order_by('-updated_on')
         serializer = ScriptSerializer(scripts, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -30,7 +30,7 @@ class ScriptView(APIView):
     def post(self, request):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
         request.data['created_by'] = user_data.get('user_id')
         serializer = ScriptSerializer(data=request.data)
         if serializer.is_valid():
@@ -54,7 +54,7 @@ class ContributorView(APIView):
     def get(self, request, script_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
         try:
             script = Script.objects.get(script_uuid=script_uuid, created_by=user_data.get('user_id'))
         except Script.DoesNotExist:
@@ -67,7 +67,7 @@ class ContributorView(APIView):
     def post(self, request, script_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
         try:
             script = Script.objects.get(script_uuid=script_uuid, created_by=user_data.get('user_id'))
         except Script.DoesNotExist:
@@ -106,7 +106,7 @@ class ContributorRetrieveView(APIView):
     def get(self, request, contributor_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
         contributor = self.get_object(contributor_uuid)
         if contributor:
@@ -117,7 +117,7 @@ class ContributorRetrieveView(APIView):
     def put(self, request, contributor_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
         contributor = self.get_object(contributor_uuid)
         if contributor:
@@ -136,7 +136,7 @@ class ContributorRetrieveView(APIView):
     def delete(self, request, contributor_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
         contributor = self.get_object(contributor_uuid)
         if contributor:
@@ -161,7 +161,7 @@ class StoryDocsListCreateView(APIView):
     def post(self, request, script_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
         try:
             script = Script.objects.get(script_uuid=script_uuid)
@@ -207,7 +207,7 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
     def get(self, request, story_docs_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
         story_docs = self.get_object(story_docs_uuid)
         if story_docs:
@@ -218,7 +218,7 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
     def put(self, request, story_docs_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
         story_docs = self.get_object(story_docs_uuid)
         if story_docs:
@@ -237,7 +237,7 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
     def delete(self, request, story_docs_uuid):
         user_data = self.get_user_id(request)
         if not user_data.get('user_id'):
-            return Response(user_data.get('message'), status=status.HTTP_401_UNAUTHORIZED)
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
         story_docs = self.get_object(story_docs_uuid)
         if story_docs:
