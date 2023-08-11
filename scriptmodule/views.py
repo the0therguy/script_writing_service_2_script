@@ -255,7 +255,7 @@ class SubStoryDocsListCreateView(APIView):
                 return Response(serializer.data, status=status.HTTP_200_OK)
             parent_script = self.get_script(script.parent.script_uuid)
             if parent_script:
-                sub_story = SubStory.objects.filter(**{'story_docs__script': script}).order_by('sub_story_no')
+                sub_story = SubStory.objects.filter(**{'story_docs__script': parent_script}).order_by('sub_story_no')
                 serializer = SubStorySerializer(sub_story, many=True)
                 return Response(serializer.data, status=status.HTTP_200_OK)
             return Response('No Script Found', status=status.HTTP_400_BAD_REQUEST)
@@ -304,6 +304,8 @@ class SubStoryDocsListCreateView(APIView):
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
                 story_docs = StoryDocs.objects.create(**{'story_docs_uuid': uuid.uuid4(), 'script': parent_script})
                 story_docs.save()
+                create_script_activity({'action': 'create', 'message': 'new story doc created',
+                                        'details': {'created_by': user_data.get('user_id')}})
                 request.data['story_docs'] = story_docs.id
                 serializer = SubStorySerializer(data=request.data)
                 if serializer.is_valid():
@@ -314,3 +316,58 @@ class SubStoryDocsListCreateView(APIView):
                 return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
             return Response('No script found', status=status.HTTP_400_BAD_REQUEST)
         return Response({'error': 'Script not found'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class SubStoryRetrieveView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_object(self, sub_story_uuid):
+        try:
+            return SubStory.objects.get(sub_story_uuid=sub_story_uuid)
+        except SubStory.DoesNotExist:
+            return None
+
+    def get(self, request, sub_story_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        sub_story = self.get_object(sub_story_uuid)
+        if not sub_story:
+            return Response("No substory found by this id", status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = SubStorySerializer(sub_story)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, sub_story_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        sub_story = self.get_object(sub_story_uuid)
+        if not sub_story:
+            return Response("No sub story found by this id", status=status.HTTP_400_BAD_REQUEST)
+
+        serializer = SubStoryUpdateSerializer(sub_story, request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            create_script_activity({'action': 'update', 'message': f'sub_story {sub_story_uuid} updated',
+                                    'details': {'created_by': user_data.get('user_id')}})
+
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, sub_story_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        sub_story = self.get_object(sub_story_uuid)
+        if not sub_story:
+            return Response("No sub story found by this id", status=status.HTTP_400_BAD_REQUEST)
+
+        sub_story.delete()
+        create_script_activity({'action': 'delete', 'message': f'sub_story {sub_story_uuid} deleted',
+                                'details': {'created_by': user_data.get('user_id')}})
+        return Response('Sub story deleted successfully', status=status.HTTP_204_NO_CONTENT)

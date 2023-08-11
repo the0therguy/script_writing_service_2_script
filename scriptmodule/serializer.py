@@ -40,3 +40,9 @@ class SubStorySerializer(serializers.ModelSerializer):
     class Meta:
         model = SubStory
         fields = '__all__'
+
+
+class SubStoryUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = SubStory
+        exclude = ('sub_story_uuid', 'story_docs')
