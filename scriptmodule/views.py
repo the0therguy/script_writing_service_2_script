@@ -155,14 +155,14 @@ class StoryDocsListCreateView(APIView):
         except Script.DoesNotExist:
             return Response({'script_uuid': 'Script not found.'}, status=status.HTTP_404_NOT_FOUND)
         if not script.parent:
-            story_docs = StoryDocs.objects.create(
-                **{'story_docs_uuid': request.data.get('uuid'), 'heading': request.data.get('heading'),
-                   'script': script})
-            story_docs.save()
-            create_script_activity({'action': 'create', 'message': 'new contributor added',
-                                    'details': {'created_by': user_data.get('user_id')}})
-
-            return Response(status=status.HTTP_201_CREATED)
+            request.data['script'] = script.id
+            serializer = StoryDocsSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                create_script_activity({'action': 'create', 'message': 'new contributor added',
+                                        'details': {'created_by': user_data.get('user_id')}})
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         parent_script = Script.objects.get(script_uuid=script.parent.script_uuid)
         story_docs = StoryDocs.objects.create(
             **{'story_docs_uuid': request.data.get('uuid'), 'heading': request.data.get('heading'),
@@ -178,50 +178,100 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [TokenAuthentication]
 
-    def get_object(self, story_docs_uuid):
+    def get_script(self, script_uuid):
         try:
-            return StoryDocs.objects.get(story_docs_uuid=story_docs_uuid)
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_object(self, script):
+        try:
+            return StoryDocs.objects.get(script=script)
         except StoryDocs.DoesNotExist:
             return None
 
-    def get(self, request, story_docs_uuid):
+    def get(self, request, script_uuid):
         user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
-        story_docs = self.get_object(story_docs_uuid)
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response({'error': 'Script not found'}, status=status.HTTP_404_NOT_FOUND)
+        if not script.parent:
+            story_docs = self.get_object(script)
+            if story_docs:
+                serializer = StoryDocsSerializer(story_docs)
+                return Response(serializer.data)
+            return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
+        parent_script = self.get_script(script.parent.script_uuid)
+        story_docs = self.get_object(parent_script)
         if story_docs:
             serializer = StoryDocsSerializer(story_docs)
             return Response(serializer.data)
         return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    def put(self, request, story_docs_uuid):
+    def put(self, request, script_uuid):
         user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
-        story_docs = self.get_object(story_docs_uuid)
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response({'error': 'Script not found'}, status=status.HTTP_404_NOT_FOUND)
+        if not script.parent:
+            story_docs = self.get_object(script)
+            if story_docs:
+                serializer = StoryDocsUpdateSerializer(story_docs, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    create_script_activity({'action': 'update',
+                                            'message': f'story docs {story_docs.story_docs_uuid} updated',
+                                            'details': {'created_by': user_data.get('user_id')}})
+                    return Response(serializer.data)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
+        parent_script = self.get_script(script.parent.script_uuid)
+        story_docs = self.get_object(parent_script)
         if story_docs:
             serializer = StoryDocsUpdateSerializer(story_docs, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
                 create_script_activity({'action': 'update',
-                                        'message': f'contributor {story_docs_uuid} updated',
+                                        'message': f'story docs {story_docs.story_docs_uuid} updated',
                                         'details': {'created_by': user_data.get('user_id')}})
                 return Response(serializer.data)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
 
-    def delete(self, request, story_docs_uuid):
+    def delete(self, request, script_uuid):
         user_data = get_user_id(request)
         if not user_data.get('user_id'):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
-        story_docs = self.get_object(story_docs_uuid)
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response({'error': 'Script not found'}, status=status.HTTP_404_NOT_FOUND)
+        if not script.parent:
+            story_docs = self.get_object(script)
+            if story_docs:
+                sub_story = SubStory.objects.filter(story_docs=story_docs)
+                sub_story.delete()
+                create_script_activity({'action': 'delete',
+                                        'message': f'sub story of story docs {story_docs.story_docs_uuid} deleted',
+                                        'details': {'created_by': user_data.get('user_id')}})
+                story_docs.delete()
+                create_script_activity({'action': 'delete',
+                                        'message': f'story docs {story_docs.story_docs_uuid} deleted',
+                                        'details': {'created_by': user_data.get('user_id')}})
+                return Response({'message': 'StoryDocs deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+            return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)
+        parent_script = self.get_script(script.parent.script_uuid)
+        story_docs = self.get_object(parent_script)
         if story_docs:
             story_docs.delete()
             create_script_activity({'action': 'delete',
-                                    'message': f'contributor {story_docs_uuid} deleted',
+                                    'message': f'story docs {story_docs.story_docs_uuid} deleted',
                                     'details': {'created_by': user_data.get('user_id')}})
             return Response({'message': 'StoryDocs deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
         return Response({'error': 'StoryDocs not found'}, status=status.HTTP_404_NOT_FOUND)

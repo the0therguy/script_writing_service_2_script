@@ -7,7 +7,7 @@ urlpatterns = [
     path('api/v1/contributor/<str:contributor_uuid>/', ContributorRetrieveView.as_view(),
          name='contributor-get-update-delete'),
     path('api/v1/storydocs/<str:script_uuid>/', StoryDocsListCreateView.as_view(), name='story-list-create-view'),
-    path('api/v1/storydoc/<str:story_docs_uuid>/', StoryDocsRetrieveUpdateDeleteView.as_view(),
+    path('api/v1/storydoc/<str:script_uuid>/', StoryDocsRetrieveUpdateDeleteView.as_view(),
          name='story-docs-update-delete'),
     path('api/v1/sub-stories/<str:script_uuid>/', SubStoryDocsListCreateView.as_view(),
          name='sub-story-list-create-view'),
