@@ -130,6 +130,7 @@ class Scene(models.Model):
     next_scene = models.CharField(max_length=50, null=True, blank=True)
 
     act = models.ForeignKey(Act, on_delete=models.SET_NULL, null=True, blank=True)
+    comment = models.OneToOneField(Comment, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         if self.scene_header:
@@ -209,6 +210,7 @@ class Dialogue(models.Model):
                                      related_name='character')
 
     scene = models.ForeignKey(Scene, on_delete=models.SET_NULL, null=True, blank=True)
+    comment = models.OneToOneField(Comment, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         if self.dual_dialogue:

@@ -421,3 +421,55 @@ class SubStoryRetrieveView(APIView):
         create_script_activity({'action': 'delete', 'message': f'sub_story {sub_story_uuid} deleted',
                                 'details': {'created_by': user_data.get('user_id')}})
         return Response('Sub story deleted successfully', status=status.HTTP_204_NO_CONTENT)
+
+
+class ActListView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_contributor(self, script, contributor):
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor, contributor_role='editor')
+        except Contributor.DoesNotExist:
+            return None
+
+    def get(self, request, script_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        acts = Act.objects.filter(**{'script': script}).order_by('act_no')
+        serializer = ActSerializer(acts, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request, script_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+        contributor = self.get_contributor(script, user_data.get('user_id'))
+
+        if script.created_by == user_data.get('user_id') or contributor:
+            request.data['script'] = script.id
+            request.data['total_word'] = len(request.data.get('title').split(" "))
+            serializer = ActSerializer(data=request.data)
+            if serializer.is_valid():
+                serializer.save()
+                create_script_activity({'action': 'create', 'message': f'act created of {script_uuid}',
+                                        'details': {'created_by': user_data.get('user_id')}})
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        if not contributor:
+            return Response("You don't have permission to edit this script", status=status.HTTP_401_UNAUTHORIZED)

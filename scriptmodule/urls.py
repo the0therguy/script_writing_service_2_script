@@ -12,4 +12,5 @@ urlpatterns = [
     path('api/v1/sub-stories/<str:script_uuid>/', SubStoryDocsListCreateView.as_view(),
          name='sub-story-list-create-view'),
     path('api/v1/sub-story/<str:sub_story_uuid>/', SubStoryRetrieveView.as_view(), name='sub-story-get-put-delete'),
+    path('api/v1/acts/<str:script_uuid>/', ActListView.as_view(), name='acts-get-create'),
 ]
