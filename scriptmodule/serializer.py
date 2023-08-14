@@ -52,3 +52,9 @@ class ActSerializer(serializers.ModelSerializer):
     class Meta:
         model = Act
         fields = '__all__'
+
+
+class ActUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Act
+        exclude = ('act_uuid', 'script')

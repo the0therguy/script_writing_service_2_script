@@ -385,7 +385,7 @@ class SubStoryRetrieveView(APIView):
 
         sub_story = self.get_object(sub_story_uuid)
         if not sub_story:
-            return Response("No substory found by this id", status=status.HTTP_400_BAD_REQUEST)
+            return Response("No sub story found by this id", status=status.HTTP_400_BAD_REQUEST)
 
         serializer = SubStorySerializer(sub_story)
         return Response(serializer.data, status=status.HTTP_200_OK)
@@ -473,3 +473,86 @@ class ActListView(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         if not contributor:
             return Response("You don't have permission to edit this script", status=status.HTTP_401_UNAUTHORIZED)
+
+
+class ActRetrieveView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_object(self, act_uuid):
+        try:
+            return Act.objects.get(act_uuid=act_uuid)
+        except Act.DoesNotExist:
+            return None
+
+    def get_contributor(self, script, contributor):
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor, contributor_role='editor')
+        except Contributor.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get(self, request, act_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+        act = self.get_object(act_uuid)
+        if not act:
+            return Response('No act found with this act', status=status.HTTP_400_BAD_REQUEST)
+        serializer = ActSerializer(act)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def put(self, request, act_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+        act = self.get_object(act_uuid)
+        if not act:
+            return Response('No act found with this act', status=status.HTTP_400_BAD_REQUEST)
+
+        script = self.get_script(act.script.script_uuid)
+        if not script:
+            return Response("this act doesn't belong to any script", status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'))
+        if script.created_by == user_data.get('user_id') or contributor:
+            serializer = ActUpdateSerializer(act, request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                create_script_activity({'action': 'update', 'message': f'act {act_uuid} updated',
+                                        'details': {'created_by': user_data.get('user_id')}})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to edit this act", status=status.HTTP_401_UNAUTHORIZED)
+
+    def delete(self, request, act_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+        act = self.get_object(act_uuid)
+        if not act:
+            return Response('No act found with this act', status=status.HTTP_400_BAD_REQUEST)
+
+        script = self.get_script(act.script.script_uuid)
+        if not script:
+            return Response("this act doesn't belong to any script", status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'))
+
+        if script.created_by == user_data.get('user_id') or contributor:
+            scene = Scene.objects.filter(act=act)
+            scene.delete()
+            create_script_activity(
+                {'action': 'delete', 'message': f'delete all the scenes. Which is connected to act {act_uuid}',
+                 'details': {'created_by': user_data.get('user_id')}})
+            act.delete()
+            create_script_activity({'action': 'delete', 'message': f'act {act_uuid} deleted',
+                                    'details': {'created_by': user_data.get('user_id')}})
+            return Response('Deleted successfully', status=status.HTTP_204_NO_CONTENT)
+        return Response("You don't have permission to delete this act", status=status.HTTP_401_UNAUTHORIZED)
+

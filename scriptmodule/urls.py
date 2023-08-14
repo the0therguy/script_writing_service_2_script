@@ -13,4 +13,5 @@ urlpatterns = [
          name='sub-story-list-create-view'),
     path('api/v1/sub-story/<str:sub_story_uuid>/', SubStoryRetrieveView.as_view(), name='sub-story-get-put-delete'),
     path('api/v1/acts/<str:script_uuid>/', ActListView.as_view(), name='acts-get-create'),
+    path('api/v1/act/<str:act_uuid>/', ActRetrieveView.as_view(), name='act-get-put-delete'),
 ]
