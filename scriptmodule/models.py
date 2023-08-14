@@ -51,10 +51,8 @@ class Script(models.Model):
 
 
 CONTRIBUTOR_ROLE = (
-    ('editor', 'Editor'),
-    ('reviewer', 'Reviewer'),
-    ('viewer', 'Viewer'),
-    ('actor', 'Actor')
+    ('co-writer', 'Co-Writer'),
+    ('script-consultant', 'Script Consultant')
 )
 
 

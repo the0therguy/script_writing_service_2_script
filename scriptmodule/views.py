@@ -154,6 +154,8 @@ class StoryDocsListCreateView(APIView):
             script = Script.objects.get(script_uuid=script_uuid)
         except Script.DoesNotExist:
             return Response({'script_uuid': 'Script not found.'}, status=status.HTTP_404_NOT_FOUND)
+        if not script.created_by == user_data.get('user_id'):
+            return Response("You don't have permission to this scope", status=status.HTTP_401_UNAUTHORIZED)
         if not script.parent:
             request.data['script'] = script.id
             serializer = StoryDocsSerializer(data=request.data)
@@ -219,6 +221,9 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
         script = self.get_script(script_uuid)
         if not script:
             return Response({'error': 'Script not found'}, status=status.HTTP_404_NOT_FOUND)
+        if not script.created_by == user_data.get('user_id'):
+            return Response("You don't have permission to this scope", status=status.HTTP_401_UNAUTHORIZED)
+
         if not script.parent:
             story_docs = self.get_object(script)
             if story_docs:
@@ -252,6 +257,9 @@ class StoryDocsRetrieveUpdateDeleteView(APIView):
         script = self.get_script(script_uuid)
         if not script:
             return Response({'error': 'Script not found'}, status=status.HTTP_404_NOT_FOUND)
+        if not script.created_by == user_data.get('user_id'):
+            return Response("You don't have permission to this scope", status=status.HTTP_401_UNAUTHORIZED)
+
         if not script.parent:
             story_docs = self.get_object(script)
             if story_docs:
@@ -317,6 +325,9 @@ class SubStoryDocsListCreateView(APIView):
             return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
 
         script = self.get_script(script_uuid)
+        if not script.created_by == user_data.get('user_id'):
+            return Response("You don't have permission to this scope", status=status.HTTP_401_UNAUTHORIZED)
+
         if script:
             if not script.parent:
                 story_docs = self.get_story_docs(script)
@@ -399,6 +410,9 @@ class SubStoryRetrieveView(APIView):
         if not sub_story:
             return Response("No sub story found by this id", status=status.HTTP_400_BAD_REQUEST)
 
+        if not sub_story.story_docs.script.created_by == user_data.get('user_id'):
+            return Response("You don't have permission to this scope", status=status.HTTP_401_UNAUTHORIZED)
+
         serializer = SubStoryUpdateSerializer(sub_story, request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -416,6 +430,9 @@ class SubStoryRetrieveView(APIView):
         sub_story = self.get_object(sub_story_uuid)
         if not sub_story:
             return Response("No sub story found by this id", status=status.HTTP_400_BAD_REQUEST)
+
+        if not sub_story.story_docs.script.created_by == user_data.get('user_id'):
+            return Response("You don't have permission to this scope", status=status.HTTP_401_UNAUTHORIZED)
 
         sub_story.delete()
         create_script_activity({'action': 'delete', 'message': f'sub_story {sub_story_uuid} deleted',
@@ -435,7 +452,7 @@ class ActListView(APIView):
 
     def get_contributor(self, script, contributor):
         try:
-            return Contributor.objects.get(script=script, contributor=contributor, contributor_role='editor')
+            return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
         except Contributor.DoesNotExist:
             return None
 
@@ -487,7 +504,7 @@ class ActRetrieveView(APIView):
 
     def get_contributor(self, script, contributor):
         try:
-            return Contributor.objects.get(script=script, contributor=contributor, contributor_role='editor')
+            return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
         except Contributor.DoesNotExist:
             return None
 
@@ -555,4 +572,3 @@ class ActRetrieveView(APIView):
                                     'details': {'created_by': user_data.get('user_id')}})
             return Response('Deleted successfully', status=status.HTTP_204_NO_CONTENT)
         return Response("You don't have permission to delete this act", status=status.HTTP_401_UNAUTHORIZED)
-
