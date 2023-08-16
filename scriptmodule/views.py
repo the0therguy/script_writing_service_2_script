@@ -633,7 +633,7 @@ class SceneCreateView(APIView):
                 location_type = serializer.data.get('scene_header').lstrip()[:3]
                 if location_type and location_type != 'int':
                     if location_type != 'ext':
-                        location_type = ""
+                        location_type = "int"
                 create_script_activity({'action': 'create', 'message': f"{request.data.get('scene_uuid')} was created",
                                         'details': {'created_by': user_data.get('user_id')}})
                 location = LocationSerializer(data=
@@ -644,6 +644,7 @@ class SceneCreateView(APIView):
                     create_script_activity(
                         {'action': 'create', 'message': f"{request.data.get('scene_uuid')} of location was created",
                          'details': {'created_by': user_data.get('user_id')}})
+                print(location.errors)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("You don't have permission to create scene", status=status.HTTP_401_UNAUTHORIZED)
@@ -727,7 +728,7 @@ class SceneRetrieveView(APIView):
                     location_type = serializer.data.get('scene_header').lstrip()[:3]
                     if location_type and location_type != 'int':
                         if location_type != 'ext':
-                            location_type = ""
+                            location_type = "int"
                     location = Location.objects.get(scene=scene)
                     if location_type != location.location_type:
                         location_serializer = LocationUpdateSerializer(location, {'location_type': location_type},
@@ -776,3 +777,85 @@ class SceneRetrieveView(APIView):
                  'details': {'created_by': user_data.get('user_id')}})
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response("You don't have permission to delete scene", status=status.HTTP_401_UNAUTHORIZED)
+
+
+class LocationRetrieveView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_scene(self, scene_uuid, act):
+        try:
+            return Scene.objects.get(scene_uuid=scene_uuid, act=act)
+        except Scene.DoesNotExist:
+            return None
+
+    def get_contributor(self, script, contributor, co_writer):
+        if co_writer:
+            try:
+                return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
+            except Contributor.DoesNotExist:
+                return None
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor)
+        except Contributor.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_act(self, act_uuid):
+        try:
+            return Act.objects.get(act_uuid=act_uuid)
+        except Act.DoesNotExist:
+            return None
+
+    def get(self, request, script_uuid, act_uuid, scene_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+        act = self.get_act(act_uuid)
+        if not act:
+            return Response('No act found with this id', status=status.HTTP_400_BAD_REQUEST)
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            scene = self.get_scene(scene_uuid, act)
+            if scene:
+                location = Location.objects.get(scene=scene)
+                serializer = LocationSerializer(location)
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response("No script found", status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to view this location", status=status.HTTP_401_UNAUTHORIZED)
+
+    def put(self, request, script_uuid, act_uuid, scene_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+        act = self.get_act(act_uuid)
+        if not act:
+            return Response('No act found with this id', status=status.HTTP_400_BAD_REQUEST)
+        contributor = self.get_contributor(script, user_data.get('user_id'), True)
+        if script.created_by == user_data.get('user_id') or contributor:
+            scene = self.get_scene(scene_uuid, act)
+            if scene:
+                location = Location.objects.get(scene=scene)
+                serializer = LocationUpdateSerializer(location, data=request.data, partial=True)
+                if serializer.is_valid():
+                    serializer.save()
+                    create_script_activity(
+                        {'action': 'update', 'message': f"{location.location_uuid} updated",
+                         'details': {'created_by': user_data.get('user_id')}})
+                    return Response(serializer.data, status=status.HTTP_200_OK)
+                return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            return Response("No script found", status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to view this location", status=status.HTTP_401_UNAUTHORIZED)

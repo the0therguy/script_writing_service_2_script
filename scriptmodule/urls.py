@@ -16,5 +16,7 @@ urlpatterns = [
     path('api/v1/act/<str:act_uuid>/', ActRetrieveView.as_view(), name='act-get-put-delete'),
     path('api/v1/scenes/<str:script_uuid>/<str:act_uuid>/', SceneCreateView.as_view(), name='scene-get-create'),
     path('api/v1/scene/<str:script_uuid>/<str:act_uuid>/<str:scene_uuid>/', SceneRetrieveView.as_view(),
-         name='scene-get-update-delete')
+         name='scene-get-update-delete'),
+    path('api/v1/location/<str:script_uuid>/<str:act_uuid>/<str:scene_uuid>/', LocationRetrieveView.as_view(),
+         name='location-get-update')
 ]

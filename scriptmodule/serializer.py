@@ -81,4 +81,4 @@ class LocationSerializer(serializers.ModelSerializer):
 class LocationUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
-        exclude = ('location_uuid', 'scene')
+        exclude = ('location_uuid', 'scene', 'location_type')
