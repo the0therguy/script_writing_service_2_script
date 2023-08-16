@@ -58,3 +58,15 @@ class ActUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Act
         exclude = ('act_uuid', 'script')
+
+
+class SceneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Scene
+        fields = '__all__'
+
+
+class LocationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        fields = '__all__'

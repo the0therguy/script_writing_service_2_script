@@ -114,13 +114,13 @@ class Act(models.Model):
 
 class Scene(models.Model):
     scene_uuid = models.CharField(max_length=50)
-    scene_header = models.CharField(max_length=200)
-    transaction_keyword = models.CharField(max_length=200)
-    action = models.CharField(max_length=200)
+    scene_header = models.CharField(max_length=200, null=True, blank=True)
+    transaction_keyword = models.CharField(max_length=200, null=True, blank=True)
+    action = models.CharField(max_length=200, null=True, blank=True)
     scene_no = models.IntegerField(default=1)
-    scene_goal = models.CharField(max_length=200)
-    scene_length = models.FloatField()
-    emotional_value = models.IntegerField(validators=[MinValueValidator(-10), MaxValueValidator(10)])
+    scene_goal = models.CharField(max_length=200, null=True, blank=True)
+    scene_length = models.FloatField(default=0.0)
+    emotional_value = models.IntegerField(validators=[MinValueValidator(-10), MaxValueValidator(10)], default=0)
     total_word = models.IntegerField(default=0)
     page_no = models.IntegerField(default=1)
 
@@ -144,10 +144,10 @@ LOCATION_TYPE = (
 
 class Location(models.Model):
     location_uuid = models.CharField(max_length=50)
-    location_type = models.CharField(max_length=5, choices=LOCATION_TYPE)
+    location_type = models.CharField(max_length=5, choices=LOCATION_TYPE, default='int')
     description = models.TextField(null=True, blank=True)
 
-    scene = models.ForeignKey(Scene, on_delete=models.SET_NULL, null=True, blank=True)
+    scene = models.OneToOneField(Scene, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.location_type + ' ' + self.scene.scene_header
