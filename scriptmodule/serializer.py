@@ -66,7 +66,19 @@ class SceneSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class SceneUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Scene
+        exclude = ('scene_uuid', 'act')
+
+
 class LocationSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
         fields = '__all__'
+
+
+class LocationUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Location
+        exclude = ('location_uuid', 'scene')
