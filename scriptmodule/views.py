@@ -7,6 +7,7 @@ from .utils import token_validator
 from .serializer import *
 import uuid
 from rest_framework import status
+from django.db.models import F
 
 
 # Create your views here.
@@ -482,13 +483,17 @@ class ActListView(APIView):
             request.data['script'] = script.id
             serializer = ActSerializer(data=request.data)
             if serializer.is_valid():
+                act_no = request.data.get('act_no')
+                # checking if act_no exist in this script if exist it will upgrade the act_no which is greater than
+                # or equal to the act_no
+                if act_no:
+                    Act.objects.filter(act_no__gte=act_no).update(act_no=F('act_no') + 1)
                 serializer.save()
                 create_script_activity({'action': 'create', 'message': f'act created of {script_uuid}',
                                         'details': {'created_by': user_data.get('user_id')}})
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        if not contributor:
-            return Response("You don't have permission to edit this script", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("You don't have permission to edit this script", status=status.HTTP_401_UNAUTHORIZED)
 
 
 class ActRetrieveView(APIView):
@@ -628,6 +633,12 @@ class SceneCreateView(APIView):
             request.data['act'] = act.id
             serializer = SceneSerializer(data=request.data)
             if serializer.is_valid():
+                scene_no = request.data.get('scene_no')
+                # checking if scene_no exist in this act. If exist it will upgrade the scene_no which is greater than
+                # or equal to the scene_no
+                if scene_no:
+                    scene_no = request.data.get('scene_no')
+                    Scene.objects.filter(act=act, scene_no__gte=scene_no).update(scene_no=F('scene_no') + 1)
                 serializer.save()
                 scene_id = serializer.data.get('id')
                 location_type = serializer.data.get('scene_header').lstrip()[:3]
@@ -644,7 +655,6 @@ class SceneCreateView(APIView):
                     create_script_activity(
                         {'action': 'create', 'message': f"{request.data.get('scene_uuid')} of location was created",
                          'details': {'created_by': user_data.get('user_id')}})
-                print(location.errors)
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("You don't have permission to create scene", status=status.HTTP_401_UNAUTHORIZED)
