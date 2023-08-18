@@ -23,5 +23,6 @@ urlpatterns = [
     path('api/v1/arche-type/<str:script_uuid>/<str:arche_type_uuid>/', ArcheRetrieveView.as_view(),
          name='archi-type-get-update-delete'),
     path('api/v1/characters/<str:script_uuid>/', CharacterListView.as_view(), name='character-list-create'),
-
+    path('api/v1/character/<str:script_uuid>/<str:character_uuid>/', CharacterRetrieveView.as_view(),
+         name='character-get-update-delete')
 ]

@@ -1030,12 +1030,6 @@ class CharacterListView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [TokenAuthentication]
 
-    def get_scene(self, scene_uuid, act):
-        try:
-            return Scene.objects.get(scene_uuid=scene_uuid, act=act)
-        except Scene.DoesNotExist:
-            return None
-
     def get_contributor(self, script, contributor, co_writer):
         if co_writer:
             try:
@@ -1062,7 +1056,7 @@ class CharacterListView(APIView):
         if not script:
             return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
 
-        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        contributor = self.get_contributor(script, user_data.get('user_id'), True)
         if script.created_by == user_data.get('user_id') or contributor:
             characters = Character.objects.filter(script=script)
             serializer = CharacterSerializer(characters, many=True)
@@ -1085,6 +1079,18 @@ class CharacterListView(APIView):
                 request.data['archetype'] = archetype.id
             request.data['total_word'] = len(request.data.get('name').split(" "))
             request.data['script'] = script.id
+            # Calculate the empty column ratio
+            total_columns = Character._meta.fields  # All fields including primary key
+            empty_columns = sum(
+                1 for field in total_columns if field.name != 'id' and not request.data.get(field.name)
+            )
+
+            if len(total_columns) == 0:
+                character_health = 0  # To avoid division by zero
+            else:
+                character_health = empty_columns / (len(total_columns) - 1)  # Excluding primary key
+
+            request.data['character_health'] = round((1 - character_health) * 100, 2)
             serializer = CharacterSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
@@ -1096,3 +1102,45 @@ class CharacterListView(APIView):
         return Response("You don't have permission to create character", status=status.HTTP_401_UNAUTHORIZED)
 
 
+class CharacterRetrieveView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_contributor(self, script, contributor, co_writer):
+        if co_writer:
+            try:
+                return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
+            except Contributor.DoesNotExist:
+                return None
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor)
+        except Contributor.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_character(self, script, character_uuid):
+        try:
+            return Character.objects.get(script=script, character_uuid=character_uuid)
+        except Character.DoesNotExist:
+            return None
+
+    def get(self, request, script_uuid, character_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            character = self.get_character(script, character_uuid)
+            serializer = CharacterSerializer(character)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response("You don't have permission to view this character", status=status.HTTP_401_UNAUTHORIZED)

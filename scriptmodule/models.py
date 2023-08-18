@@ -164,9 +164,20 @@ class ArcheType(models.Model):
         return self.title
 
 
+CHARACTER_GENDER = (
+    ('male', "Male"),
+    ('female', "Female"),
+    ('other', "Other"),
+)
+
+
 class Character(models.Model):
     character_uuid = models.CharField(max_length=50)
     name = models.CharField(max_length=200)
+    gender = models.CharField(max_length=10, choices=CHARACTER_GENDER, default='male')
+    interest = models.TextField(null=True, blank=True)
+    occupation = models.CharField(max_length=250, null=True, blank=True)
+    character_health = models.FloatField(default=0.0)
     image = models.ImageField(null=True, blank=True)
     age = models.IntegerField(null=True, blank=True)
     possession = models.CharField(max_length=10, null=True, blank=True)

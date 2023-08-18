@@ -100,3 +100,9 @@ class CharacterSerializer(serializers.ModelSerializer):
     class Meta:
         model = Character
         fields = '__all__'
+
+
+class CharacterUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Character
+        exclude = ('character_uuid', 'script')
