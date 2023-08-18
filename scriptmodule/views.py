@@ -930,6 +930,100 @@ class ArcheTypeListCreate(APIView):
             serializer = ArcheTypeSerializer(data=request.data)
             if serializer.is_valid():
                 serializer.save()
+                create_script_activity(
+                    {'action': 'create', 'message': f"{request.data.get('arche_type_uuid')} created",
+                     'details': {'created_by': user_data.get('user_id')}})
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("You don't have permission to add archetype", status=status.HTTP_401_UNAUTHORIZED)
+
+
+class ArcheRetrieveView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_contributor(self, script, contributor, co_writer):
+        if co_writer:
+            try:
+                return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
+            except Contributor.DoesNotExist:
+                return None
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor)
+        except Contributor.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_arche_type(self, script, arche_type_uuid):
+        try:
+            return ArcheType.objects.get(script=script, arche_type_uuid=arche_type_uuid)
+        except ArcheType.DoesNotExist:
+            return None
+
+    def get(self, request, script_uuid, arche_type_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            arche_type = self.get_arche_type(script, arche_type_uuid)
+            serializer = ArcheTypeSerializer(arche_type)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response("You don't have permission to view this arche-type", status=status.HTTP_401_UNAUTHORIZED)
+
+    def put(self, request, script_uuid, arche_type_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            arche_type = self.get_arche_type(script, arche_type_uuid)
+            request.data['slug'] = request.data.get('title').lower().replace(" ", "")
+            serializer = ArcheTypeUpdateSerializer(arche_type, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                create_script_activity(
+                    {'action': 'update', 'message': f"{arche_type_uuid} updated",
+                     'details': {'created_by': user_data.get('user_id')}})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to edit this arche type", status=status.HTTP_401_UNAUTHORIZED)
+
+    def delete(self, request, script_uuid, arche_type_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            arche_type = self.get_arche_type(script, arche_type_uuid)
+            if arche_type:
+                arche_type.delete()
+                create_script_activity(
+                    {'action': 'delete', 'message': f"{arche_type_uuid} deleted",
+                     'details': {'created_by': user_data.get('user_id')}})
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response('No data found with this arche type uuid', status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to delete this arche type", status=status.HTTP_401_UNAUTHORIZED)
+
+
+
