@@ -94,3 +94,9 @@ class ArcheTypeUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ArcheType
         fields = ['title', 'slug']
+
+
+class CharacterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Character
+        fields = '__all__'

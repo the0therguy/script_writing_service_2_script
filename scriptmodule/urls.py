@@ -20,6 +20,8 @@ urlpatterns = [
     path('api/v1/location/<str:script_uuid>/<str:act_uuid>/<str:scene_uuid>/', LocationRetrieveView.as_view(),
          name='location-get-update'),
     path('api/v1/arche-types/<str:script_uuid>/', ArcheTypeListCreate.as_view(), name='archi-types-get-create'),
-    path('api/v1/arche-type/<str:script_uuid>/<str:arche_type_uuid>/', ArcheRetrieveView.as_view(), name='archi'
-                                                                                                           '-type-get'),
+    path('api/v1/arche-type/<str:script_uuid>/<str:arche_type_uuid>/', ArcheRetrieveView.as_view(),
+         name='archi-type-get-update-delete'),
+    path('api/v1/characters/<str:script_uuid>/', CharacterListView.as_view(), name='character-list-create'),
+
 ]

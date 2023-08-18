@@ -179,6 +179,7 @@ class Character(models.Model):
     character_image_generation = models.IntegerField(default=0)
 
     archetype = models.ForeignKey(ArcheType, on_delete=models.SET_NULL, null=True, blank=True)
+    script = models.ForeignKey(Script, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.name
