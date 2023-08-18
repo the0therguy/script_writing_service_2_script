@@ -18,5 +18,6 @@ urlpatterns = [
     path('api/v1/scene/<str:script_uuid>/<str:act_uuid>/<str:scene_uuid>/', SceneRetrieveView.as_view(),
          name='scene-get-update-delete'),
     path('api/v1/location/<str:script_uuid>/<str:act_uuid>/<str:scene_uuid>/', LocationRetrieveView.as_view(),
-         name='location-get-update')
+         name='location-get-update'),
+    path('api/v1/arche-types/<str:script_uuid>/', ArcheTypeListCreate.as_view(), name='archi-type-get-create'),
 ]

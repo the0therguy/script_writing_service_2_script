@@ -157,6 +157,7 @@ class ArcheType(models.Model):
     arche_type_uuid = models.CharField(max_length=50)
     title = models.CharField(max_length=200)
     slug = models.CharField(max_length=200)
+    script = models.ForeignKey(Script, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return self.title

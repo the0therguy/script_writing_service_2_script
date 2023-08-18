@@ -82,3 +82,9 @@ class LocationUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Location
         exclude = ('location_uuid', 'scene', 'location_type')
+
+
+class ArcheTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ArcheType
+        fields = '__all__'
