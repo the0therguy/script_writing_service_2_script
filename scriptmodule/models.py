@@ -123,6 +123,7 @@ class Scene(models.Model):
     emotional_value = models.IntegerField(validators=[MinValueValidator(-10), MaxValueValidator(10)], default=0)
     total_word = models.IntegerField(default=0)
     page_no = models.IntegerField(default=1)
+    bg_color = models.CharField(max_length=8, default="#ffffff")
 
     previous_scene = models.CharField(max_length=50, null=True, blank=True)
     next_scene = models.CharField(max_length=50, null=True, blank=True)
