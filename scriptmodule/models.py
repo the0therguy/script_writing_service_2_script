@@ -40,6 +40,11 @@ class Script(models.Model):
     created_on = models.DateTimeField(auto_now_add=True)
     updated_on = models.DateTimeField(default=timezone.now, blank=True)
     number_of_pages = models.IntegerField(default=1)
+    written_by = models.CharField(max_length=200, null=True, blank=True)
+    email_address = models.EmailField(null=True, blank=True)
+    contact_name = models.CharField(max_length=200, null=True, blank=True)
+    phone_number = models.CharField(max_length=15, null=True, blank=True)
+
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
     created_by = models.IntegerField()
