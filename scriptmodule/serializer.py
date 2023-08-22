@@ -108,6 +108,12 @@ class CharacterUpdateSerializer(serializers.ModelSerializer):
         exclude = ('character_uuid', 'script')
 
 
+class CharacterSceneSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = CharacterScene
+        fields = '__all__'
+
+
 class DialogueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dialogue

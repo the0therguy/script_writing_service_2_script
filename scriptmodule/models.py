@@ -191,7 +191,7 @@ class Character(models.Model):
     obstacle = models.TextField(null=True, blank=True)
     character_map = models.JSONField(null=True, blank=True)
     character_synopsis = models.TextField(null=True, blank=True)
-    total_word = models.IntegerField()
+    total_word = models.IntegerField(default=0)
     character_image_generation = models.IntegerField(default=0)
 
     archetype = models.ForeignKey(ArcheType, on_delete=models.SET_NULL, null=True, blank=True)

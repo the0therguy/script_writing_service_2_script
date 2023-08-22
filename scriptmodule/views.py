@@ -1224,6 +1224,54 @@ class CharacterRetrieveView(APIView):
         return Response("You don't have permission to view this character", status=status.HTTP_401_UNAUTHORIZED)
 
 
+class CharacterSceneListView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_contributor(self, script, contributor, co_writer):
+        if co_writer:
+            try:
+                return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
+            except Contributor.DoesNotExist:
+                return None
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor)
+        except Contributor.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_character(self, script, character_uuid):
+        try:
+            return Character.objects.get(script=script, character_uuid=character_uuid)
+        except Character.DoesNotExist:
+            return None
+
+    def get(self, request, script_uuid, character_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            character = self.get_character(script=script, character_uuid=character_uuid)
+            if not character:
+                return Response("Character doesn't found", status=status.HTTP_400_BAD_REQUEST)
+
+            character_scene = CharacterScene.objects.filter(character=character)
+            serializer = CharacterSceneSerializer(character_scene, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response("You don't have permission to view this character", status=status.HTTP_401_UNAUTHORIZED)
+
+
 class DialogueListView(APIView):
     permission_classes = [AllowAny]
     authentication_classes = [TokenAuthentication]
@@ -1257,6 +1305,12 @@ class DialogueListView(APIView):
         except Act.DoesNotExist:
             return None
 
+    def get_character(self, script, name):
+        try:
+            return Character.objects.get(script=script, name=name)
+        except Character.DoesNotExist:
+            return None
+
     def get(self, request, script_uuid, act_uuid, scene_uuid):
         user_data = get_user_id(request)
         if not user_data.get('user_id'):
@@ -1278,4 +1332,58 @@ class DialogueListView(APIView):
             dialogues = Dialogue.objects.filter(scene=scene).order_by('dialogue_no')
             serializer = DialogueSerializer(dialogues, many=True)
             return Response(serializer.data, status=status.HTTP_200_OK)
-        return Response("You don't have permission to view this character", status=status.HTTP_401_UNAUTHORIZED)
+        return Response("You don't have permission to view dialogues", status=status.HTTP_401_UNAUTHORIZED)
+
+    def post(self, request, script_uuid, act_uuid, scene_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), True)
+        if script.created_by == user_data.get('user_id') or contributor:
+            act = self.get_act(script=script, act_uuid=act_uuid)
+            if not act:
+                return Response("No act available", status=status.HTTP_400_BAD_REQUEST)
+            scene = self.get_scene(act=act, scene_uuid=scene_uuid)
+            if not scene:
+                return Response('No scene available', status=status.HTTP_400_BAD_REQUEST)
+
+            if request.data.get('character'):
+                character = self.get_character(script=script, name=request.data.get('character'))
+                if not character:
+                    c = Character.objects.create(
+                        **{'name': request.data.get('character'), 'character_uuid': uuid.uuid4(), 'script': script,
+                           'total_word': len(request.data.get('character').split(" "))})
+                    request.data['character'] = c.id
+                    create_script_activity({'action': 'create', 'message': f"character {c.character_uuid} created",
+                                            'details': {'created_by': user_data.get('user_id')}})
+                else:
+                    request.data['character'] = character.id
+            request.data['scene'] = scene.id
+            serializer = DialogueSerializer(data=request.data)
+
+            if serializer.is_valid():
+                serializer.save()
+                create_script_activity(
+                    {'action': 'create', 'message': f"dialogue {request.data.get('dialogue_uuid')} created",
+                     'details': {'created_by': user_data.get('user_id')}})
+                character_scene = CharacterScene.objects.filter(
+                    **{'scene__id': scene.id, 'character__id': request.data.get('character')})
+                if not character_scene:
+                    character_scene = CharacterScene.objects.create(
+                        **{'character_scene_uuid': uuid.uuid4(),
+                           'character': Character.objects.get(id=request.data.get('character')),
+                           'scene': scene})
+                    character_scene.save()
+                    create_script_activity(
+                        {'action': 'create',
+                         'message': f"character's scene {character_scene.character_scene_uuid} created",
+                         'details': {'created_by': user_data.get('user_id')}})
+
+                return Response(serializer.data, status=status.HTTP_201_CREATED)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to create dialogue", status=status.HTTP_401_UNAUTHORIZED)
