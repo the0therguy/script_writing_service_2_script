@@ -1224,4 +1224,58 @@ class CharacterRetrieveView(APIView):
         return Response("You don't have permission to view this character", status=status.HTTP_401_UNAUTHORIZED)
 
 
+class DialogueListView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
 
+    def get_contributor(self, script, contributor, co_writer):
+        if co_writer:
+            try:
+                return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
+            except Contributor.DoesNotExist:
+                return None
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor)
+        except Contributor.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_scene(self, act, scene_uuid):
+        try:
+            return Scene.objects.get(act=act, scene_uuid=scene_uuid)
+        except Scene.DoesNotExist:
+            return None
+
+    def get_act(self, script, act_uuid):
+        try:
+            return Act.objects.get(script=script, act_uuid=act_uuid)
+        except Act.DoesNotExist:
+            return None
+
+    def get(self, request, script_uuid, act_uuid, scene_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            act = self.get_act(script=script, act_uuid=act_uuid)
+            if not act:
+                return Response("No act available", status=status.HTTP_400_BAD_REQUEST)
+            scene = self.get_scene(act=act, scene_uuid=scene_uuid)
+            if not scene:
+                return Response('No scene available', status=status.HTTP_400_BAD_REQUEST)
+
+            dialogues = Dialogue.objects.filter(scene=scene).order_by('dialogue_no')
+            serializer = DialogueSerializer(dialogues, many=True)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response("You don't have permission to view this character", status=status.HTTP_401_UNAUTHORIZED)

@@ -24,5 +24,7 @@ urlpatterns = [
          name='archi-type-get-update-delete'),
     path('api/v1/characters/<str:script_uuid>/', CharacterListView.as_view(), name='character-list-create'),
     path('api/v1/character/<str:script_uuid>/<str:character_uuid>/', CharacterRetrieveView.as_view(),
-         name='character-get-update-delete')
+         name='character-get-update-delete'),
+    path('api/v1/dialogues/<str:script_uuid>/<str:act_uuid>/<str:scene_uuid>/', DialogueListView.as_view(),
+         name='dialogue-list-create'),
 ]
