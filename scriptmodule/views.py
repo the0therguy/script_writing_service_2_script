@@ -8,6 +8,7 @@ from .serializer import *
 import uuid
 from rest_framework import status
 from django.db.models import F
+from django.db.models import Q
 
 
 # Create your views here.
@@ -1144,3 +1145,83 @@ class CharacterRetrieveView(APIView):
             serializer = CharacterSerializer(character)
             return Response(serializer.data, status=status.HTTP_200_OK)
         return Response("You don't have permission to view this character", status=status.HTTP_401_UNAUTHORIZED)
+
+    def put(self, request, script_uuid, character_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), True)
+        if script.created_by == user_data.get('user_id') or contributor:
+            character = self.get_character(script, character_uuid)
+            if request.data.get('archetype'):
+                archetype = ArcheType.objects.get(title=request.data.get('archetype'), script=script)
+                request.data['archetype'] = archetype.id
+            request.data['total_word'] = len(request.data.get('name').split(" "))
+            serializer = CharacterUpdateSerializer(character, data=request.data, partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                # Calculate the empty column ratio
+                total_columns = Character._meta.fields  # All fields including primary key
+                empty_columns = sum(
+                    1 for field in total_columns if field.name != 'id' and not request.data.get(field.name)
+                )
+
+                if len(total_columns) == 0:
+                    character_health = 0  # To avoid division by zero
+                else:
+                    character_health = empty_columns / (len(total_columns) - 1)  # Excluding primary key
+
+                # Update the character_health field
+                character.character_health = round((1 - character_health) * 100, 2)
+                character.save()
+                create_script_activity(
+                    {'action': 'update', 'message': f"{character_uuid} character updated",
+                     'details': {'created_by': user_data.get('user_id')}})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to edit this character", status=status.HTTP_401_UNAUTHORIZED)
+
+    def delete(self, request, script_uuid, character_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), True)
+        if script.created_by == user_data.get('user_id') or contributor:
+            character = self.get_character(script, character_uuid)
+            if character:
+
+                character_scene = CharacterScene.objects.filter(character=character)
+                if character_scene:
+                    character_scene.delete()
+                    create_script_activity(
+                        {'action': 'delete', 'message': f"{character_uuid}'s character scene deleted",
+                         'details': {'created_by': user_data.get('user_id')}})
+
+                character_dialogue = Dialogue.objects.filter(Q(character=character) | Q(dual_character=character))
+                if character_dialogue:
+                    character_dialogue.delete()
+                    create_script_activity(
+                        {'action': 'delete', 'message': f"{character_uuid}'s dialogue deleted",
+                         'details': {'created_by': user_data.get('user_id')}})
+
+                character.delete()
+                create_script_activity(
+                    {'action': 'delete', 'message': f"{character_uuid} character deleted",
+                     'details': {'created_by': user_data.get('user_id')}})
+
+                return Response(status=status.HTTP_204_NO_CONTENT)
+            return Response('No character found', status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to view this character", status=status.HTTP_401_UNAUTHORIZED)
+
+
+

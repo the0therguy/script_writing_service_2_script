@@ -202,6 +202,7 @@ class Character(models.Model):
 
 
 class CharacterScene(models.Model):
+    character_scene_uuid = models.CharField(max_length=50, null=True, blank=True)
     character = models.ForeignKey(Character, on_delete=models.SET_NULL, null=True, blank=True)
     scene = models.ForeignKey(Scene, on_delete=models.SET_NULL, null=True, blank=True)
 
