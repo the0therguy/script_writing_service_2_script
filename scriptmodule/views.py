@@ -1706,10 +1706,60 @@ class DialogueComment(APIView):
                 return Response("No dialogue found", status=status.HTTP_400_BAD_REQUEST)
             request.data['created_by'] = user_data.get('user_id')
             comment_data, s = create_comment(data=request.data)
-            print()
             if s:
                 dialogue.comment = Comment.objects.get(id=comment_data['id'])
                 dialogue.save()
+                return Response(comment_data, status=status.HTTP_201_CREATED)
+            return Response(comment_data, status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to view dialogues", status=status.HTTP_401_UNAUTHORIZED)
+
+
+class SceneComment(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_contributor(self, script, contributor, co_writer):
+        if co_writer:
+            try:
+                return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
+            except Contributor.DoesNotExist:
+                return None
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor)
+        except Contributor.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_scene(self, scene_uuid):
+        try:
+            return Scene.objects.get(scene_uuid=scene_uuid)
+        except Scene.DoesNotExist:
+            return None
+
+    def post(self, request, script_uuid, scene_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            scene = self.get_scene(scene_uuid=scene_uuid)
+            if not scene:
+                return Response("No scene found with this id", status=status.HTTP_400_BAD_REQUEST)
+
+            request.data['created_by'] = user_data.get('user_id')
+            comment_data, s = create_comment(data=request.data)
+            if s:
+                scene.comment = Comment.objects.get(id=comment_data['id'])
+                scene.save()
                 return Response(comment_data, status=status.HTTP_201_CREATED)
             return Response(comment_data, status=status.HTTP_400_BAD_REQUEST)
         return Response("You don't have permission to view dialogues", status=status.HTTP_401_UNAUTHORIZED)
