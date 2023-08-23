@@ -9,7 +9,7 @@ class Comment(models.Model):
     comment_uuid = models.CharField(max_length=50)
     title = models.CharField(max_length=200, null=True, blank=True)
     body = models.TextField(null=True, blank=True)
-    bg_color = models.CharField(max_length=8, null=True)
+    bg_color = models.CharField(max_length=8, null=True, blank=True)
     created_on = models.DateTimeField(auto_now_add=True)
 
     created_by = models.IntegerField()

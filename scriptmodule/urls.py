@@ -31,4 +31,6 @@ urlpatterns = [
          name='dialogue-list-create'),
     path('api/v1/dialogue/<str:script_uuid>/<str:act_uuid>/<str:scene_uuid>/<str:dialogue_uuid>/',
          DialogueRetrieveView.as_view(), name='dialogue-get-update-delete'),
+    path('api/v1/dialogue-comment/<str:script_uuid>/<str:scene_uuid>/<str:dialogue_uuid>/', DialogueComment.as_view(),
+         name='dialogue-comment'),
 ]
