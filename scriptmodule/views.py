@@ -1424,3 +1424,223 @@ class DialogueListView(APIView):
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("You don't have permission to create dialogue", status=status.HTTP_401_UNAUTHORIZED)
+
+
+class DialogueRetrieveView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_contributor(self, script, contributor, co_writer):
+        if co_writer:
+            try:
+                return Contributor.objects.get(script=script, contributor=contributor, contributor_role='co-writer')
+            except Contributor.DoesNotExist:
+                return None
+        try:
+            return Contributor.objects.get(script=script, contributor=contributor)
+        except Contributor.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid):
+        try:
+            return Script.objects.get(script_uuid=script_uuid)
+        except Script.DoesNotExist:
+            return None
+
+    def get_act(self, script, act_uuid):
+        try:
+            return Act.objects.get(script=script, act_uuid=act_uuid)
+        except Act.DoesNotExist:
+            return None
+
+    def get_scene(self, act, scene_uuid):
+        try:
+            return Scene.objects.get(act=act, scene_uuid=scene_uuid)
+        except Scene.DoesNotExist:
+            return None
+
+    def get_dialogue(self, scene, dialogue_uuid):
+        try:
+            return Dialogue.objects.get(scene=scene, dialogue_uuid=dialogue_uuid)
+        except Dialogue.DoesNotExist:
+            return None
+
+    def get_character(self, script, name):
+        try:
+            return Character.objects.get(script=script, name=name)
+        except Character.DoesNotExist:
+            return None
+
+    def character_handling(self, script, character_name, user_data):
+        character = self.get_character(script=script, name=character_name)
+        print(character)
+        if not character:
+            c = Character.objects.create(
+                **{'name': character_name, 'character_uuid': uuid.uuid4(), 'script': script,
+                   'total_word': len(character_name.split(" "))})
+            create_script_activity({'action': 'create', 'message': f"character {c.character_uuid} created",
+                                    'details': {'created_by': user_data.get('user_id')}})
+            return c.id
+        return character.id
+
+    def character_scene_handling(self, scene, character, user_data):
+        character_scene = CharacterScene.objects.filter(
+            **{'scene__id': scene.id, 'character__id': character})
+        if not character_scene:
+            character_scene = CharacterScene.objects.create(
+                **{'character_scene_uuid': uuid.uuid4(),
+                   'character': Character.objects.get(id=character),
+                   'scene': scene})
+            character_scene.save()
+            create_script_activity(
+                {'action': 'create',
+                 'message': f"character's scene {character_scene.character_scene_uuid} created",
+                 'details': {'created_by': user_data.get('user_id')}})
+
+    def get(self, request, script_uuid, act_uuid, scene_uuid, dialogue_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), False)
+        if script.created_by == user_data.get('user_id') or contributor:
+            act = self.get_act(script=script, act_uuid=act_uuid)
+            if not act:
+                return Response("No act available", status=status.HTTP_400_BAD_REQUEST)
+            scene = self.get_scene(act=act, scene_uuid=scene_uuid)
+            if not scene:
+                return Response('No scene available', status=status.HTTP_400_BAD_REQUEST)
+
+            dialogue = self.get_dialogue(scene=scene, dialogue_uuid=dialogue_uuid)
+            if not dialogue:
+                return Response("No dialogue found in this uuid", status=status.HTTP_400_BAD_REQUEST)
+            serializer = DialogueSerializer(dialogue)
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response("You don't have permission to view dialogue", status=status.HTTP_401_UNAUTHORIZED)
+
+    def put(self, request, script_uuid, act_uuid, scene_uuid, dialogue_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), True)
+        if script.created_by == user_data.get('user_id') or contributor:
+            act = self.get_act(script=script, act_uuid=act_uuid)
+            if not act:
+                return Response("No act available", status=status.HTTP_400_BAD_REQUEST)
+            scene = self.get_scene(act=act, scene_uuid=scene_uuid)
+            if not scene:
+                return Response('No scene available', status=status.HTTP_400_BAD_REQUEST)
+
+            dialogue = self.get_dialogue(scene=scene, dialogue_uuid=dialogue_uuid)
+            if not dialogue:
+                return Response("No dialogue found in this uuid", status=status.HTTP_400_BAD_REQUEST)
+
+            if request.data.get('character'):
+                character = self.character_handling(script=script, character_name=request.data.get('character'),
+                                                    user_data=user_data)
+                request.data['character'] = character
+            if request.data['dual'] != dialogue.dual:
+                if request.data.get('dual'):
+                    dual_character = self.character_handling(script=script,
+                                                             character_name=request.data.get('dual_character'),
+                                                             user_data=user_data)
+                    print(dual_character)
+                    request.data['dual_character'] = dual_character
+
+            serializer = DialogueUpdateSerializer(dialogue, data=request.data, partial=True)
+            dialogue_no = request.data.get('dialogue_no')
+            if serializer.is_valid():
+                if dialogue_no:
+                    Dialogue.objects.filter(scene=scene, dialogue_no__gte=dialogue_no).update(
+                        dialogue_no=F('dialogue_no') + 1)
+                serializer.save()
+                if request.data.get('character'):
+                    self.character_scene_handling(scene=scene, character=request.data.get('character'),
+                                                  user_data=user_data)
+                if request.data.get('dual'):
+                    self.character_scene_handling(scene=scene, character=request.data.get('dual_character'),
+                                                  user_data=user_data)
+
+                scene.total_word += request.data.get('total_word') - dialogue.total_word
+                scene.scene_length += request.data.get(
+                    'total_word') - dialogue.total_word  # Adjust this according to your calculation logic
+                scene.save()
+
+                # Extract the associated Act
+                act = scene.act
+
+                # Update the Act's total_word with scene_length
+                act.total_word += request.data.get('total_word') - dialogue.total_word  # Add scene_length to the act's total_word
+                act.save()
+
+                # Extract the associated Script from the Act
+                script = act.script
+
+                # Update the Script's word_count with the act's total_word
+                script.word_count += request.data.get('total_word') - dialogue.total_word  # Add act's total_word to the script's
+                # word_count
+                script.updated_on = timezone.now()
+                script.save()
+
+                create_script_activity(
+                    {'action': 'update', 'message': f"dialogue {dialogue_uuid} updated",
+                     'details': {'created_by': user_data.get('user_id')}})
+                return Response(serializer.data, status=status.HTTP_200_OK)
+            print(serializer.errors)
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        return Response("You don't have permission to view dialogues", status=status.HTTP_401_UNAUTHORIZED)
+
+    def delete(self, request, script_uuid, act_uuid, scene_uuid, dialogue_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        script = self.get_script(script_uuid)
+        if not script:
+            return Response('No script found with this id', status=status.HTTP_400_BAD_REQUEST)
+
+        contributor = self.get_contributor(script, user_data.get('user_id'), True)
+        if script.created_by == user_data.get('user_id') or contributor:
+            act = self.get_act(script=script, act_uuid=act_uuid)
+            if not act:
+                return Response("No act available", status=status.HTTP_400_BAD_REQUEST)
+            scene = self.get_scene(act=act, scene_uuid=scene_uuid)
+            if not scene:
+                return Response('No scene available', status=status.HTTP_400_BAD_REQUEST)
+
+            dialogue = self.get_dialogue(scene=scene, dialogue_uuid=dialogue_uuid)
+            if not dialogue:
+                return Response("No dialogue found in this uuid", status=status.HTTP_400_BAD_REQUEST)
+
+            dialogue.delete()
+            scene.total_word -= dialogue.total_word
+            scene.scene_length -= dialogue.total_word  # Adjust this according to your calculation logic
+            scene.save()
+
+            # Extract the associated Act
+            act = scene.act
+
+            # Update the Act's total_word with scene_length
+            act.total_word -= dialogue.total_word  # Add scene_length to the act's total_word
+            act.save()
+
+            # Extract the associated Script from the Act
+            script = act.script
+
+            # Update the Script's word_count with the act's total_word
+            script.word_count -= dialogue.total_word  # Add act's total_word to the script's
+            # word_count
+            script.updated_on = timezone.now()
+            script.save()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        return Response("You don't have permission to view dialogues", status=status.HTTP_401_UNAUTHORIZED)
+

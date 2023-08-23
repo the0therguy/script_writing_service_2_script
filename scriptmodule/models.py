@@ -217,14 +217,14 @@ class Dialogue(models.Model):
     dual = models.BooleanField(default=False)
     dual_line = models.TextField(null=True, blank=True)
     dual_character = models.ForeignKey(Character, on_delete=models.SET_NULL, null=True, blank=True,
-                                          related_name='dual_dialogue_character')
+                                       related_name='dual_dialogue_character')
 
     dialogue_no = models.IntegerField(default=1)
 
     previous_dialogue = models.CharField(max_length=50, null=True, blank=True)
     next_dialogue = models.CharField(max_length=50, null=True, blank=True)
     character = models.ForeignKey(Character, on_delete=models.SET_NULL, null=True, blank=True,
-                                     related_name='character')
+                                  related_name='character')
 
     scene = models.ForeignKey(Scene, on_delete=models.SET_NULL, null=True, blank=True)
     comment = models.OneToOneField(Comment, on_delete=models.SET_NULL, null=True, blank=True)

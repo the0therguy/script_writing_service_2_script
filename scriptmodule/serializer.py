@@ -118,3 +118,9 @@ class DialogueSerializer(serializers.ModelSerializer):
     class Meta:
         model = Dialogue
         fields = '__all__'
+
+
+class DialogueUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Dialogue
+        exclude = ('dialogue_uuid', 'scene')
