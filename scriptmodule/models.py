@@ -215,16 +215,15 @@ class Dialogue(models.Model):
     line = models.TextField(null=True, blank=True)
     total_word = models.IntegerField(default=0)
     dual = models.BooleanField(default=False)
-    dual_line = models.OneToOneField('self', on_delete=models.SET_NULL, null=True, blank=True,
-                                     related_name='dual_dialogue')
-    dual_character = models.OneToOneField(Character, on_delete=models.SET_NULL, null=True, blank=True,
+    dual_line = models.TextField(null=True, blank=True)
+    dual_character = models.ForeignKey(Character, on_delete=models.SET_NULL, null=True, blank=True,
                                           related_name='dual_dialogue_character')
 
     dialogue_no = models.IntegerField(default=1)
 
     previous_dialogue = models.CharField(max_length=50, null=True, blank=True)
     next_dialogue = models.CharField(max_length=50, null=True, blank=True)
-    character = models.OneToOneField(Character, on_delete=models.SET_NULL, null=True, blank=True,
+    character = models.ForeignKey(Character, on_delete=models.SET_NULL, null=True, blank=True,
                                      related_name='character')
 
     scene = models.ForeignKey(Scene, on_delete=models.SET_NULL, null=True, blank=True)
@@ -232,7 +231,8 @@ class Dialogue(models.Model):
 
     def __str__(self):
         if self.dual_dialogue:
-            return self.character.name + ': ' + self.line + '||' + self.dual_dialogue_character.name + ": " + self.dual_dialogue.line
+            return (self.character.name + ': ' + self.line + '||' + self.dual_dialogue_character.name + ": " +
+                    self.dual_dialogue.line)
         return self.character.name + ': ' + self.line
 
 

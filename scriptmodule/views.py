@@ -638,7 +638,6 @@ class SceneCreateView(APIView):
                 # checking if scene_no exist in this act. If exist it will upgrade the scene_no which is greater than
                 # or equal to the scene_no
                 if scene_no:
-                    scene_no = request.data.get('scene_no')
                     Scene.objects.filter(act=act, scene_no__gte=scene_no).update(scene_no=F('scene_no') + 1)
                 serializer.save()
                 scene_id = serializer.data.get('id')
@@ -1161,7 +1160,8 @@ class CharacterRetrieveView(APIView):
             if request.data.get('archetype'):
                 archetype = ArcheType.objects.get(title=request.data.get('archetype'), script=script)
                 request.data['archetype'] = archetype.id
-            request.data['total_word'] = len(request.data.get('name').split(" "))
+            if request.data.get('name'):
+                request.data['total_word'] = len(request.data.get('name').split(" "))
             serializer = CharacterUpdateSerializer(character, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -1311,6 +1311,31 @@ class DialogueListView(APIView):
         except Character.DoesNotExist:
             return None
 
+    def character_handling(self, script, character_name, user_data):
+        character = self.get_character(script=script, name=character_name)
+        if not character:
+            c = Character.objects.create(
+                **{'name': character_name, 'character_uuid': uuid.uuid4(), 'script': script,
+                   'total_word': len(character_name.split(" "))})
+            create_script_activity({'action': 'create', 'message': f"character {c.character_uuid} created",
+                                    'details': {'created_by': user_data.get('user_id')}})
+            return c.id
+        return character.id
+
+    def character_scene_handling(self, scene, character, user_data):
+        character_scene = CharacterScene.objects.filter(
+            **{'scene__id': scene.id, 'character__id': character})
+        if not character_scene:
+            character_scene = CharacterScene.objects.create(
+                **{'character_scene_uuid': uuid.uuid4(),
+                   'character': Character.objects.get(id=character),
+                   'scene': scene})
+            character_scene.save()
+            create_script_activity(
+                {'action': 'create',
+                 'message': f"character's scene {character_scene.character_scene_uuid} created",
+                 'details': {'created_by': user_data.get('user_id')}})
+
     def get(self, request, script_uuid, act_uuid, scene_uuid):
         user_data = get_user_id(request)
         if not user_data.get('user_id'):
@@ -1353,37 +1378,49 @@ class DialogueListView(APIView):
                 return Response('No scene available', status=status.HTTP_400_BAD_REQUEST)
 
             if request.data.get('character'):
-                character = self.get_character(script=script, name=request.data.get('character'))
-                if not character:
-                    c = Character.objects.create(
-                        **{'name': request.data.get('character'), 'character_uuid': uuid.uuid4(), 'script': script,
-                           'total_word': len(request.data.get('character').split(" "))})
-                    request.data['character'] = c.id
-                    create_script_activity({'action': 'create', 'message': f"character {c.character_uuid} created",
-                                            'details': {'created_by': user_data.get('user_id')}})
-                else:
-                    request.data['character'] = character.id
+                character = self.character_handling(script=script, character_name=request.data.get('character'),
+                                                    user_data=user_data)
+                request.data['character'] = character
             request.data['scene'] = scene.id
             serializer = DialogueSerializer(data=request.data)
-
+            dialogue_no = request.data.get('dialogue_no')
+            if request.data.get('dual'):
+                dual_character = self.character_handling(script=script,
+                                                         character_name=request.data.get('dual_character'),
+                                                         user_data=user_data)
+                request.data['dual_character'] = dual_character
             if serializer.is_valid():
+                if dialogue_no:
+                    Dialogue.objects.filter(scene=scene, dialogue_no__gte=dialogue_no).update(
+                        dialogue_no=F('dialogue_no') + 1)
                 serializer.save()
+                self.character_scene_handling(scene=scene, character=request.data.get('character'), user_data=user_data)
+                if request.data.get('dual'):
+                    self.character_scene_handling(scene=scene, character=request.data.get('dual_character'),
+                                                  user_data=user_data)
+
+                scene.total_word += request.data.get('total_word')
+                scene.scene_length += request.data.get('total_word')  # Adjust this according to your calculation logic
+                scene.save()
+
+                # Extract the associated Act
+                act = scene.act
+
+                # Update the Act's total_word with scene_length
+                act.total_word += scene.scene_length  # Add scene_length to the act's total_word
+                act.save()
+
+                # Extract the associated Script from the Act
+                script = act.script
+
+                # Update the Script's word_count with the act's total_word
+                script.word_count += act.total_word  # Add act's total_word to the script's word_count
+                script.updated_on = timezone.now()
+                script.save()
+
                 create_script_activity(
                     {'action': 'create', 'message': f"dialogue {request.data.get('dialogue_uuid')} created",
                      'details': {'created_by': user_data.get('user_id')}})
-                character_scene = CharacterScene.objects.filter(
-                    **{'scene__id': scene.id, 'character__id': request.data.get('character')})
-                if not character_scene:
-                    character_scene = CharacterScene.objects.create(
-                        **{'character_scene_uuid': uuid.uuid4(),
-                           'character': Character.objects.get(id=request.data.get('character')),
-                           'scene': scene})
-                    character_scene.save()
-                    create_script_activity(
-                        {'action': 'create',
-                         'message': f"character's scene {character_scene.character_scene_uuid} created",
-                         'details': {'created_by': user_data.get('user_id')}})
-
                 return Response(serializer.data, status=status.HTTP_201_CREATED)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("You don't have permission to create dialogue", status=status.HTTP_401_UNAUTHORIZED)
