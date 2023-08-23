@@ -25,6 +25,12 @@ SCRIPT_MODE = (
     ('light', 'Light')
 )
 
+SCRIPT_CONDITION = (
+    ('not_registered', 'Not Registered'),
+    ('pending', 'Pending'),
+    ('registered', 'Registered')
+)
+
 
 class Script(models.Model):
     script_uuid = models.CharField(max_length=50)
@@ -44,6 +50,7 @@ class Script(models.Model):
     email_address = models.EmailField(null=True, blank=True)
     contact_name = models.CharField(max_length=200, null=True, blank=True)
     phone_number = models.CharField(max_length=15, null=True, blank=True)
+    script_condition = models.CharField(max_length=50, choices=SCRIPT_CONDITION, default='not_registered')
 
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
