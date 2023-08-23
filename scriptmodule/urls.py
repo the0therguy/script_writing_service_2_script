@@ -35,5 +35,6 @@ urlpatterns = [
          name='dialogue-comment'),
     path('api/v1/scene-comment/<str:script_uuid>/<str:scene_uuid>/', SceneComment.as_view(),
          name='scene-comment'),
-
+    path('api/v1/comment/<str:script_uuid>/<str:comment_uuid>/', CommentRetrieveView.as_view(),
+         name='comment-get-update-delete'),
 ]
