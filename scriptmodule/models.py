@@ -237,9 +237,9 @@ class Dialogue(models.Model):
     comment = models.OneToOneField(Comment, on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
-        if self.dual_dialogue:
-            return (self.character.name + ': ' + self.line + '||' + self.dual_dialogue_character.name + ": " +
-                    self.dual_dialogue.line)
+        if self.dual:
+            return (self.character.name + ': ' + self.line + '||' + self.dual_character.name + ": " +
+                    self.dual_line)
         return self.character.name + ': ' + self.line
 
 

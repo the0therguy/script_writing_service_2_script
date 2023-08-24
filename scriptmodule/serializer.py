@@ -115,12 +115,16 @@ class CharacterSceneSerializer(serializers.ModelSerializer):
 
 
 class DialogueSerializer(serializers.ModelSerializer):
+    character_name = serializers.CharField(source='character.name', read_only=True)
+    dual_character = serializers.CharField(source='dual_character.name', read_only=True)
+
     class Meta:
         model = Dialogue
         fields = '__all__'
 
 
 class DialogueUpdateSerializer(serializers.ModelSerializer):
+
     class Meta:
         model = Dialogue
         exclude = ('dialogue_uuid', 'scene')

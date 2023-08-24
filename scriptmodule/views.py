@@ -1473,7 +1473,6 @@ class DialogueRetrieveView(APIView):
 
     def character_handling(self, script, character_name, user_data):
         character = self.get_character(script=script, name=character_name)
-        print(character)
         if not character:
             c = Character.objects.create(
                 **{'name': character_name, 'character_uuid': uuid.uuid4(), 'script': script,
@@ -1558,11 +1557,11 @@ class DialogueRetrieveView(APIView):
 
             serializer = DialogueUpdateSerializer(dialogue, data=request.data, partial=True)
             dialogue_no = request.data.get('dialogue_no')
+            print(request.data)
             if serializer.is_valid():
                 if dialogue_no:
                     Dialogue.objects.filter(scene=scene, dialogue_no__gte=dialogue_no).update(
                         dialogue_no=F('dialogue_no') + 1)
-                serializer.save()
                 if request.data.get('character'):
                     self.character_scene_handling(scene=scene, character=request.data.get('character'),
                                                   user_data=user_data)
@@ -1592,12 +1591,15 @@ class DialogueRetrieveView(APIView):
                 # word_count
                 script.updated_on = timezone.now()
                 script.save()
+                print(request.data)
+                print(serializer)
+                serializer.save()
 
                 create_script_activity(
                     {'action': 'update', 'message': f"dialogue {dialogue_uuid} updated",
                      'details': {'created_by': user_data.get('user_id')}})
                 return Response(serializer.data, status=status.HTTP_200_OK)
-            print(serializer.errors)
+            # print(serializer.errors)
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         return Response("You don't have permission to view dialogues", status=status.HTTP_401_UNAUTHORIZED)
 
