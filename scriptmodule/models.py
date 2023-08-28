@@ -32,6 +32,15 @@ SCRIPT_CONDITION = (
 )
 
 
+class ScriptFolder(models.Model):
+    script_folder_uuid = models.CharField(max_length=50)
+    title = models.CharField(max_length=50)
+    crated_by = models.IntegerField(null=True, blank=True)
+
+    def __str__(self):
+        return self.title
+
+
 class Script(models.Model):
     script_uuid = models.CharField(max_length=50)
     title = models.CharField(max_length=200, null=True, blank=True)
@@ -54,6 +63,7 @@ class Script(models.Model):
 
     parent = models.ForeignKey('self', on_delete=models.SET_NULL, null=True, blank=True)
 
+    script_folder = models.ForeignKey(ScriptFolder, on_delete=models.SET_NULL, null=True, blank=True)
     created_by = models.IntegerField()
 
     def __str__(self):

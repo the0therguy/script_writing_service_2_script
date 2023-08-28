@@ -1552,12 +1552,10 @@ class DialogueRetrieveView(APIView):
                     dual_character = self.character_handling(script=script,
                                                              character_name=request.data.get('dual_character'),
                                                              user_data=user_data)
-                    print(dual_character)
                     request.data['dual_character'] = dual_character
 
             serializer = DialogueUpdateSerializer(dialogue, data=request.data, partial=True)
             dialogue_no = request.data.get('dialogue_no')
-            print(request.data)
             if serializer.is_valid():
                 if dialogue_no:
                     Dialogue.objects.filter(scene=scene, dialogue_no__gte=dialogue_no).update(
@@ -1591,8 +1589,6 @@ class DialogueRetrieveView(APIView):
                 # word_count
                 script.updated_on = timezone.now()
                 script.save()
-                print(request.data)
-                print(serializer)
                 serializer.save()
 
                 create_script_activity(
