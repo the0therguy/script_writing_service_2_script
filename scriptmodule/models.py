@@ -35,6 +35,9 @@ SCRIPT_CONDITION = (
 class ScriptFolder(models.Model):
     script_folder_uuid = models.CharField(max_length=50)
     title = models.CharField(max_length=50)
+    created_on = models.DateTimeField(auto_now_add=True)
+    updated_on = models.DateTimeField(default=timezone.now, blank=True)
+
     crated_by = models.IntegerField(null=True, blank=True)
 
     def __str__(self):
