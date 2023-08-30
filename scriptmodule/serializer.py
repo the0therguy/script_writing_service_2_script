@@ -124,7 +124,6 @@ class DialogueSerializer(serializers.ModelSerializer):
 
 
 class DialogueUpdateSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Dialogue
         exclude = ('dialogue_uuid', 'scene')
@@ -140,3 +139,9 @@ class CommentUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         exclude = ("comment_uuid", 'created_on', 'created_by')
+
+
+class ScriptFolderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScriptFolder
+        fields = "__all__"

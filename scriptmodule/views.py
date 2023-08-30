@@ -1842,3 +1842,31 @@ class CommentRetrieveView(APIView):
             comment.delete()
             return Response(status=status.HTTP_204_NO_CONTENT)
         return Response("You don't have permission to delete comment", status=status.HTTP_401_UNAUTHORIZED)
+
+
+class ScriptFolderCreateView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get(self, request):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        folders = ScriptFolder.objects.filter(created_by=user_data.get('user_id')).order_by('-updated_on')
+        serializer = ScriptFolderSerializer(folders, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def post(self, request):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+        if not request.data.get('title'):
+            request.data['title'] = request.data['script_folder_uuid']
+        request.data['created_by'] = user_data.get('user_id')
+        serializer = ScriptFolderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
