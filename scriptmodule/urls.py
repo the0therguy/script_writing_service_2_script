@@ -38,4 +38,6 @@ urlpatterns = [
     path('api/v1/comment/<str:script_uuid>/<str:comment_uuid>/', CommentRetrieveView.as_view(),
          name='comment-get-update-delete'),
     path('api/v1/script-folders/', ScriptFolderCreateView.as_view(), name='script-folder-list-get-create'),
+    path('api/v1/script-folder/<script_folder_uuid>/', ScriptFolderRetrieveView.as_view(),
+         name='script-folder-get-update-delete'),
 ]

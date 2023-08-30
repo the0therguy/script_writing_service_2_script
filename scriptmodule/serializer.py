@@ -4,7 +4,21 @@ from rest_framework import serializers
 from .utils import token_validator
 
 
+class ScriptFolderSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScriptFolder
+        fields = "__all__"
+
+
+class ScriptFolderUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScriptFolder
+        fields = ['title']
+
+
 class ScriptSerializer(serializers.ModelSerializer):
+    script_folder_name = serializers.CharField(source='script_folder.title', read_only=True)
+
     class Meta:
         model = Script
         fields = '__all__'
@@ -139,9 +153,3 @@ class CommentUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Comment
         exclude = ("comment_uuid", 'created_on', 'created_by')
-
-
-class ScriptFolderSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ScriptFolder
-        fields = "__all__"

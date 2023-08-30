@@ -1867,6 +1867,70 @@ class ScriptFolderCreateView(APIView):
         serializer = ScriptFolderSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            create_script_activity(
+                {'action': 'create',
+                 'message': f"script folder created",
+                 'details': {'created_by': user_data.get('user_id')}})
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+
+class ScriptFolderRetrieveView(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_folder(self, script_folder_uuid, created_by):
+        try:
+            return ScriptFolder.objects.get(script_folder_uuid=script_folder_uuid, created_by=created_by)
+        except ScriptFolder.DoesNotExist:
+            return None
+
+    def get(self, request, script_folder_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        folder = self.get_folder(script_folder_uuid=script_folder_uuid, created_by=user_data.get('user_id'))
+        if not folder:
+            return Response("There is no folder with this id", status=status.HTTP_400_BAD_REQUEST)
+        scripts = Script.objects.filter(script_folder=folder, created_by=user_data.get('user_id'), parent=None)
+        serializer = ScriptSerializer(scripts, many=True)
+        return Response(serializer.data)
+
+    def put(self, request, script_folder_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        folder = self.get_folder(script_folder_uuid=script_folder_uuid, created_by=user_data.get('user_id'))
+        if not folder:
+            return Response("There is no folder with this id", status=status.HTTP_400_BAD_REQUEST)
+        serializer = ScriptFolderUpdateSerializer(folder, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            folder.updated_on = timezone.now()
+            folder.save()
+            create_script_activity(
+                {'action': 'update',
+                 'message': f"folder {folder.script_folder_uuid} has been updated",
+                 'details': {'created_by': user_data.get('user_id')}})
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    def delete(self, request, script_folder_uuid):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+
+        folder = self.get_folder(script_folder_uuid=script_folder_uuid, created_by=user_data.get('user_id'))
+        if not folder:
+            return Response("There is no folder with this id", status=status.HTTP_400_BAD_REQUEST)
+
+        scripts = Script.objects.filter(script_folder=folder, created_by=user_data.get('user_id'))
+        scripts.delete()
+        folder.delete()
+        create_script_activity(
+            {'action': 'delete',
+             'message': f"script folder {folder.title} has been deleted",
+             'details': {'created_by': user_data.get('user_id')}})
+        return Response(status=status.HTTP_204_NO_CONTENT)
