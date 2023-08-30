@@ -40,4 +40,5 @@ urlpatterns = [
     path('api/v1/script-folders/', ScriptFolderCreateView.as_view(), name='script-folder-list-get-create'),
     path('api/v1/script-folder/<script_folder_uuid>/', ScriptFolderRetrieveView.as_view(),
          name='script-folder-get-update-delete'),
+    path('api/v1/move-script-to-folder/', MoveScriptToFolder.as_view(), name='move-script-to-folder'),
 ]

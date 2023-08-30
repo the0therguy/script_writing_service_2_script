@@ -1934,3 +1934,38 @@ class ScriptFolderRetrieveView(APIView):
              'message': f"script folder {folder.title} has been deleted",
              'details': {'created_by': user_data.get('user_id')}})
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class MoveScriptToFolder(APIView):
+    permission_classes = [AllowAny]
+    authentication_classes = [TokenAuthentication]
+
+    def get_folder(self, script_folder_uuid, user):
+        try:
+            return ScriptFolder.objects.get(script_folder_uuid=script_folder_uuid, created_by=user)
+        except ScriptFolder.DoesNotExist:
+            return None
+
+    def get_script(self, script_uuid, user):
+        try:
+            return Script.objects.get(script_uuid=script_uuid, created_by=user)
+        except Script.DoesNotExist:
+            return None
+
+    def put(self, request):
+        user_data = get_user_id(request)
+        if not user_data.get('user_id'):
+            return Response("Invalid Token. Please Login again.", status=status.HTTP_401_UNAUTHORIZED)
+        folder = self.get_folder(request.data.get('script_folder_uuid'), user_data.get('user_id'))
+        if not folder:
+            return Response("No folder found with this id", status=status.HTTP_400_BAD_REQUEST)
+        script = self.get_script(request.data.get('script_uuid'), user_data.get('user_id'))
+        if not script:
+            return Response("No script found with this id", status=status.HTTP_400_BAD_REQUEST)
+
+        script.script_folder = folder
+        script.save()
+        child_script = Script.objects.filter(parent=script, created_by=user_data.get('user_id')).update(
+            script_folder=folder)
+        serializer = ScriptSerializer(script)
+        return Response(serializer.data, status=status.HTTP_200_OK)
